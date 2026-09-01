@@ -54,6 +54,12 @@ gensim==4.4.0
 torch==2.13.0
 # transformers donne accès aux modèles pré-entraînés comme DistilBERT.
 transformers==5.16.1
+# torchvision sert normalement aux modèles d'images, et on n'en fait pas ici.
+# Il est pourtant obligatoire : MLflow l'importe systématiquement quand il
+# enregistre un modèle transformers, même pour du texte. Sans lui, la
+# sauvegarde échoue sur un ModuleNotFoundError. La version processeur ne pèse
+# que 4 Mo.
+torchvision==0.28.0
 
 
 # --- Suivre les expérimentations et gérer les modèles ------------------------

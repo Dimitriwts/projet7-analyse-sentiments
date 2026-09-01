@@ -99,8 +99,24 @@ TAILLE_ECHANTILLON_CLASSIQUE = None  # None veut dire "tout le jeu de données"
 TAILLE_ECHANTILLON_AVANCE = 300_000
 
 # Approche 3, BERT. De loin la plus lourde : c'est un modèle déjà entraîné qui
-# contient des dizaines de millions de paramètres.
-TAILLE_ECHANTILLON_BERT = 50_000
+# contient 66 millions de paramètres.
+#
+# Cette taille est le résultat direct d'une mesure faite avant d'écrire le
+# notebook, et pas d'une estimation. Voici le débit de DistilBERT sur ce
+# processeur, sans carte graphique :
+#
+#     BERT figé, calculs "aller" seulement   32,7 tweets par seconde
+#     BERT affiné, "aller" et "retour"        7,2 tweets par seconde
+#
+# Autrement dit, affiner BERT sur 50 000 tweets aurait demandé près de
+# 4 heures par passage sur les données. Avec 10 000 tweets, le notebook
+# complet tient en 45 minutes, ce qui reste utilisable.
+#
+# Ce n'est pas un pis-aller : le coût de calcul fait partie de la réponse
+# qu'attend le client. La question posée est de savoir s'il faut investir
+# dans ce type de modèle, et un modèle 4,5 fois plus cher à entraîner qui
+# n'apporterait qu'un point de performance ne vaudrait pas l'investissement.
+TAILLE_ECHANTILLON_BERT = 10_000
 
 # Part des tweets mise de côté pour le test final. La même pour les trois
 # approches, sinon la comparaison ne veut rien dire.
