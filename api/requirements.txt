@@ -11,9 +11,11 @@
 # TensorFlow Lite, faite dans le notebook 05, qui permet de le servir avec un
 # moteur d'exécution de quelques mégaoctets.
 #
-# ATTENTION, VERSION DE PYTHON : le serveur doit tourner en Python 3.12.
-# Le moteur ai-edge-litert n'existe pas encore pour Python 3.13 sous Linux,
-# alors qu'il existe pour 3.11 et 3.12. C'est vérifié, pas supposé.
+# VERSION DE PYTHON : 3.11, 3.12 ou 3.13 conviennent.
+# Le moteur ai-edge-litert 2.2.0 fournit des versions Linux pour ces trois
+# versions de Python, ce qui est verifie sur PyPI et non suppose. On prend
+# 3.13, la meme qu'en developpement : plus les deux environnements se
+# ressemblent, moins il y a de surprises au deploiement.
 # =============================================================================
 
 
@@ -30,7 +32,7 @@ uvicorn==0.52.4
 # par le modèle.
 numpy==2.5.2
 # Le moteur d'exécution TensorFlow Lite. C'est lui qui remplace TensorFlow.
-ai-edge-litert==1.4.0
+ai-edge-litert==2.2.0
 
 
 # --- Rien d'autre ------------------------------------------------------------

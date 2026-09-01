@@ -214,10 +214,10 @@ L'API n'a besoin que de 5 packages, listés dans `api/requirements.txt`, contre
 scikit-learn : le modèle est servi au format TensorFlow Lite, dont le moteur
 d'exécution pèse quelques mégaoctets au lieu de 600.
 
-> **Le serveur de production doit tourner en Python 3.12.** Le moteur
-> `ai-edge-litert` n'existe pas encore pour Python 3.13 sous Linux, alors
-> qu'il existe pour 3.11 et 3.12. C'est vérifié, pas supposé. En local, sous
-> Windows, Python 3.13 fonctionne.
+> **Le serveur de production tourne en Python 3.13**, la même version qu'en
+> développement. Le moteur `ai-edge-litert` fournit des versions Linux pour
+> Python 3.11, 3.12 et 3.13, ce qui a été vérifié sur PyPI. Plus les deux
+> environnements se ressemblent, moins il y a de surprises au déploiement.
 
 ### Étape 4 : lancer l'interface de test
 

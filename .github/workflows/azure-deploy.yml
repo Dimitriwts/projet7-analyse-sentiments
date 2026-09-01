@@ -1,0 +1,150 @@
+# =============================================================================
+# Le pipeline de deploiement continu.
+#
+# GitHub Actions execute ce fichier automatiquement a chaque envoi de code sur
+# la branche principale. Il fait deux choses, dans cet ordre : il lance les
+# tests, et il ne deploie que s'ils passent tous.
+#
+# C'est ce que le cahier des charges appelle un "pipeline de deploiement
+# continu integrant des tests unitaires automatises". L'interet est simple :
+# personne ne peut mettre en ligne une version cassee, meme par distraction,
+# meme un vendredi soir. Le deploiement devient une consequence automatique du
+# code, et non un geste manuel qu'on peut rater.
+# =============================================================================
+
+name: Tests et deploiement sur Azure
+
+# --- Quand ce pipeline se declenche -----------------------------------------
+on:
+  # A chaque envoi de code sur la branche principale.
+  push:
+    branches:
+      - main
+  # Et sur simple clic depuis l'onglet Actions de GitHub, ce qui est pratique
+  # pour redeployer sans avoir a modifier le code.
+  workflow_dispatch:
+
+# --- Les reglages, regroupes ici pour n'avoir qu'un endroit a modifier -------
+env:
+  # ATTENTION : a remplacer par le nom exact de votre application Azure.
+  # Ce nom est unique dans le monde entier et forme l'adresse de l'API :
+  # https://NOM.azurewebsites.net
+  NOM_APPLICATION_AZURE: air-paradis-sentiment-dimitriwts
+
+  # La meme version de Python qu'en developpement. Plus les deux
+  # environnements se ressemblent, moins il y a de surprises au deploiement.
+  # Le moteur ai-edge-litert 2.2.0 fournit bien une version Linux pour
+  # Python 3.13, ce qui a ete verifie sur PyPI.
+  VERSION_PYTHON: "3.13"
+
+jobs:
+
+  # ===========================================================================
+  # ETAPE 1 : LES TESTS
+  # ===========================================================================
+  tests:
+    name: Tests unitaires
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Recuperer le code
+        uses: actions/checkout@v4
+
+      - name: Installer Python ${{ env.VERSION_PYTHON }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.VERSION_PYTHON }}
+          cache: pip
+
+      - name: Installer les dependances
+        # J'installe les dependances de l'API et non celles de la
+        # modelisation. C'est volontaire : les tests doivent s'executer dans
+        # le meme environnement que la production, sinon ils ne prouvent rien
+        # sur ce qui tournera reellement. Ca les rend aussi beaucoup plus
+        # rapides, puisqu'on evite d'installer TensorFlow et PyTorch.
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r api/requirements.txt
+          pip install pytest httpx
+
+      - name: Lancer les tests
+        # Si un seul test echoue, cette etape echoue, et le deploiement qui en
+        # depend ne demarre jamais.
+        run: pytest -v
+
+  # ===========================================================================
+  # ETAPE 2 : LE DEPLOIEMENT
+  # ===========================================================================
+  deploiement:
+    name: Deploiement sur Azure
+    runs-on: ubuntu-latest
+
+    # La ligne la plus importante du fichier : ce travail attend que les tests
+    # soient passes. S'ils echouent, il est purement et simplement annule, et
+    # la version en ligne reste celle qui marchait.
+    needs: tests
+
+    # On ne deploie que depuis la branche principale, jamais depuis une branche
+    # de travail, meme si ses tests passent.
+    if: github.ref == 'refs/heads/main'
+
+    environment:
+      name: production
+      url: ${{ steps.deploiement-azure.outputs.webapp-url }}
+
+    steps:
+      - name: Recuperer le code
+        uses: actions/checkout@v4
+
+      - name: Verifier que les artefacts du modele sont bien la
+        # Une verification de bon sens avant d'envoyer quoi que ce soit. Sans
+        # ces trois fichiers, l'API demarrerait puis planterait au premier
+        # appel. Autant s'en apercevoir ici.
+        run: |
+          for fichier in modele.tflite vocabulaire.json metadonnees.json; do
+            if [ ! -s "api/artefacts/$fichier" ]; then
+              echo "ERREUR : api/artefacts/$fichier est absent ou vide."
+              exit 1
+            fi
+            echo "  OK  api/artefacts/$fichier"
+          done
+
+      - name: Deployer sur Azure App Service
+        id: deploiement-azure
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.NOM_APPLICATION_AZURE }}
+          # Le profil de publication est un fichier que l'on telecharge depuis
+          # le portail Azure et que l'on colle dans les secrets du depot
+          # GitHub. Il contient les identifiants de deploiement, il ne doit
+          # donc jamais apparaitre dans le code.
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          # On n'envoie que le dossier api/, pas le projet entier. Les
+          # notebooks, les donnees et les dependances de modelisation n'ont
+          # rien a faire sur le serveur.
+          package: api
+
+      - name: Verifier que l'API repond
+        # Le deploiement peut reussir et l'application ne pas demarrer. On
+        # interroge donc la route de sante pour s'en assurer.
+        #
+        # Azure met une trentaine de secondes a redemarrer l'application, d'ou
+        # les tentatives espacees plutot qu'un appel unique.
+        run: |
+          ADRESSE="https://${{ env.NOM_APPLICATION_AZURE }}.azurewebsites.net/sante"
+          echo "Interrogation de $ADRESSE"
+
+          for tentative in 1 2 3 4 5 6 7 8 9 10; do
+            sleep 15
+            CODE=$(curl -s -o /tmp/reponse.json -w "%{http_code}" --max-time 30 "$ADRESSE" || echo "000")
+            echo "  tentative $tentative : code HTTP $CODE"
+            if [ "$CODE" = "200" ]; then
+              echo "L'API repond correctement :"
+              cat /tmp/reponse.json
+              exit 0
+            fi
+          done
+
+          echo "ERREUR : l'API n'a pas repondu apres 10 tentatives."
+          echo "Consultez les journaux de l'application dans le portail Azure."
+          exit 1
