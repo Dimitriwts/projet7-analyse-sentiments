@@ -1,0 +1,89 @@
+# =============================================================================
+# Packages necessaires a l'ENVIRONNEMENT DE MODELISATION
+# (notebooks, entrainement, interface de test, tests unitaires)
+#
+# Installation :
+#     python -m venv .venv
+#     .venv\Scripts\Activate.ps1        (Windows PowerShell)
+#     pip install -r requirements.txt
+#
+# Les versions sont figees ("==") et non laissees libres (">=") : c'est la
+# condition pour qu'un entrainement relance dans six mois donne exactement le
+# meme resultat. Une montee de version mineure de scikit-learn ou de
+# TensorFlow suffit a decaler les scores de quelques dixiemes de point, et
+# l'on ne saurait plus si l'ecart vient du modele ou de la bibliotheque.
+#
+# ATTENTION : ce fichier n'est PAS celui utilise par l'API en production.
+# L'API tourne sur un serveur Azure gratuit limite a 1 Go de memoire et
+# n'embarque qu'une poignee de packages legers : voir api/requirements.txt.
+#
+# Teste avec Python 3.13.1 sous Windows 11.
+# =============================================================================
+
+
+# --- Manipulation des donnees -----------------------------------------------
+pandas==2.3.3
+numpy==2.5.2
+# Moteur de lecture/ecriture du format Parquet, utilise pour le fichier de
+# travail partage entre les notebooks (data/processed/tweets_prepares.parquet).
+pyarrow==25.0.1
+
+
+# --- Visualisation -----------------------------------------------------------
+matplotlib==3.11.1
+seaborn==0.13.2
+
+
+# --- Approche 1 : modele classique -------------------------------------------
+# TF-IDF, regression logistique, decoupage train/test et metriques.
+scikit-learn==1.9.0
+
+
+# --- Approche 2 : modele avance sur mesure -----------------------------------
+# TensorFlow / Keras pour le reseau de neurones recurrent.
+tensorflow==2.21.0
+# Gensim pour entrainer les word embeddings Word2Vec et FastText sur le corpus.
+gensim==4.4.0
+
+
+# --- Approche 3 : modele BERT ------------------------------------------------
+# PyTorch en version processeur uniquement (pas de CUDA) : la machine de
+# developpement n'a pas de carte graphique dediee, et la version GPU pese
+# 2,5 Go pour rien.
+torch==2.13.0
+transformers==5.16.1
+
+
+# --- Suivi des experimentations et gestion des modeles -----------------------
+# MLflow assure le tracking (parametres, metriques, duree) et le Model Registry
+# (stockage centralise et versionnement des modeles).
+mlflow==3.15.2
+
+
+# --- Notebooks ---------------------------------------------------------------
+jupyter==1.1.1
+notebook==7.6.2
+ipykernel==7.3.0
+
+
+# --- API de prediction (developpement et test en local) ----------------------
+fastapi==0.141.1
+uvicorn==0.52.4
+
+
+# --- Interface de test de l'API ----------------------------------------------
+streamlit==1.62.0
+requests==2.34.2
+
+
+# --- Suivi de la performance en production -----------------------------------
+# Envoi des traces et des evenements personnalises vers Azure Application
+# Insights, qui declenche l'alerte en cas de trop nombreuses predictions
+# invalidees par l'utilisateur.
+azure-monitor-opentelemetry==1.8.2
+
+
+# --- Tests unitaires ---------------------------------------------------------
+pytest==9.1.1
+# Client HTTP utilise par le client de test de FastAPI.
+httpx==0.28.1

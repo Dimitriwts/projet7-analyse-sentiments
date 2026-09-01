@@ -1,0 +1,51 @@
+# ---------------------------------------------------------------------------
+# Fichiers et dossiers exclus du versioning Git.
+#
+# Regle generale : on ne versionne QUE ce qui est ecrit a la main (code, docs)
+# ou ce qui doit obligatoirement partir en production (artefacts de l'API).
+# Tout ce qui est volumineux ou regenerable reste sur le disque local.
+# ---------------------------------------------------------------------------
+
+# --- Environnement Python -------------------------------------------------
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# --- Donnees --------------------------------------------------------------
+# Le dataset Sentiment140 fait ~230 Mo decompresse : bien trop lourd pour Git.
+# Le README explique comment le recuperer et ou le deposer.
+data/raw/*
+data/processed/*
+# On garde quand meme les dossiers vides dans le depot (voir .gitkeep).
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+
+# --- MLflow ---------------------------------------------------------------
+# Base de suivi des experimentations + artefacts (modeles entraines).
+# Regenerable en relancant les notebooks : on ne le versionne pas.
+mlruns/
+mlflow.db
+mlartifacts/
+
+# --- Modeles intermediaires ----------------------------------------------
+# Modeles Keras/embeddings produits pendant l'exploration.
+models/
+
+# --- Jupyter --------------------------------------------------------------
+.ipynb_checkpoints/
+
+# --- Secrets --------------------------------------------------------------
+# Chaine de connexion Application Insights, identifiants Azure, etc.
+.env
+
+# --- Systeme --------------------------------------------------------------
+.DS_Store
+Thumbs.db
+
+# ---------------------------------------------------------------------------
+# NOTE IMPORTANTE : le dossier api/artefacts/ n'est PAS ignore.
+# Il contient le modele leger (TensorFlow Lite) et le vocabulaire utilises
+# par l'API en production. Le pipeline de deploiement continu deploie
+# directement depuis le depot Git : ces fichiers doivent donc s'y trouver.
+# ---------------------------------------------------------------------------
