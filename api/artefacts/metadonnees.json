@@ -1,0 +1,19 @@
+{
+  "nom_modele": "analyse-sentiment-air-paradis-avance",
+  "architecture": "GRU bidirectionnel 64, embeddings GloVe Twitter figes",
+  "date_export": "2026-09-01 16:47:16",
+  "run_mlflow": "4e589300929b47fcb6edb4314d3b6c80",
+  "longueur_max_sequence": 32,
+  "index_mot_inconnu": 1,
+  "taille_vocabulaire": 19999,
+  "seuil_decision": 0.5,
+  "version_tflite": "avec compression",
+  "metriques_test_commun": {
+    "exactitude": 0.81,
+    "auc_roc": 0.8923,
+    "f1_macro": 0.81,
+    "precision_negatif": 0.8186,
+    "rappel_negatif": 0.7965,
+    "f1_negatif": 0.8074
+  }
+}
