@@ -227,7 +227,10 @@ def preparer_donnees(forcer: bool = False) -> pd.DataFrame:
 # ---------------------------------------------------------------------------
 # 4. PRENDRE UN ÉCHANTILLON
 # ---------------------------------------------------------------------------
-def charger_echantillon(taille: int | None = None) -> pd.DataFrame:
+def charger_echantillon(
+    taille: int | None = None,
+    colonnes: list[str] | None = None,
+) -> pd.DataFrame:
     """
     Recharge les données préparées, éventuellement réduites à un échantillon.
 
@@ -243,11 +246,32 @@ def charger_echantillon(taille: int | None = None) -> pd.DataFrame:
     ----------
     taille : int ou None
         Nombre total de tweets voulu. None veut dire tout le jeu de données.
+    colonnes : list ou None
+        Les colonnes à charger. None veut dire toutes.
+
+        Ce paramètre a beaucoup plus d'effet qu'il n'y paraît, alors je
+        détaille. Voici ce que j'ai mesuré en chargeant le fichier préparé :
+
+            toutes les colonnes            1068 Mo de mémoire
+            texte_nettoye et label seuls     45 Mo de mémoire
+
+        Vingt-quatre fois moins. La colonne "texte" contient le tweet brut,
+        qui ne sert qu'à afficher des exemples lisibles dans l'analyse des
+        erreurs. Les notebooks de modélisation n'en ont pas besoin.
+
+        Pourquoi ça compte : quand la mémoire vive vient à manquer, Windows
+        se met à écrire sur le disque à la place. Un disque est des milliers
+        de fois plus lent que la mémoire, et l'entraînement d'un réseau passe
+        alors de 1 minute à 15 minutes par passage, sans qu'aucune erreur ne
+        s'affiche. Je l'ai vécu sur ce projet.
+
+        Bref : dans un notebook qui charge aussi des embeddings d'un giga-
+        octet, précisez ["texte_nettoye", "label"].
 
     Retourne
     --------
     pd.DataFrame
-        Colonnes : texte, label, texte_nettoye.
+        Les colonnes demandées, parmi texte, label et texte_nettoye.
     """
     if not config.FICHIER_DONNEES_PREPAREES.exists():
         raise FileNotFoundError(
@@ -256,7 +280,7 @@ def charger_echantillon(taille: int | None = None) -> pd.DataFrame:
             "ou appelez preparer_donnees()."
         )
 
-    donnees = pd.read_parquet(config.FICHIER_DONNEES_PREPAREES)
+    donnees = pd.read_parquet(config.FICHIER_DONNEES_PREPAREES, columns=colonnes)
 
     if taille is None or taille >= len(donnees):
         print(f"Jeu de donnees complet : {formater_nombre(len(donnees))} tweets")
