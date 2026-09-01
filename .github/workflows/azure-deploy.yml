@@ -26,10 +26,15 @@ on:
 
 # --- Les reglages, regroupes ici pour n'avoir qu'un endroit a modifier -------
 env:
-  # ATTENTION : a remplacer par le nom exact de votre application Azure.
-  # Ce nom est unique dans le monde entier et forme l'adresse de l'API :
-  # https://NOM.azurewebsites.net
+  # Le nom de la ressource Azure. C'est lui qu'attend l'action de deploiement.
   NOM_APPLICATION_AZURE: air-paradis-sentiment-dimitriwts
+
+  # L'adresse publique de l'API, qui n'est PAS le nom suivi de
+  # .azurewebsites.net. Azure ajoute desormais un suffixe aleatoire au domaine
+  # par defaut des nouvelles applications, pour eviter qu'un nom libere puisse
+  # etre repris par quelqu'un d'autre. Les deux valeurs different donc, et il
+  # faut les deux : le nom pour deployer, le domaine pour interroger l'API.
+  DOMAINE_API: air-paradis-sentiment-dimitriwts-e5fqa2gtcqb7czgc.francecentral-01.azurewebsites.net
 
   # La meme version de Python qu'en developpement. Plus les deux
   # environnements se ressemblent, moins il y a de surprises au deploiement.
@@ -131,7 +136,7 @@ jobs:
         # Azure met une trentaine de secondes a redemarrer l'application, d'ou
         # les tentatives espacees plutot qu'un appel unique.
         run: |
-          ADRESSE="https://${{ env.NOM_APPLICATION_AZURE }}.azurewebsites.net/sante"
+          ADRESSE="https://${{ env.DOMAINE_API }}/sante"
           echo "Interrogation de $ADRESSE"
 
           for tentative in 1 2 3 4 5 6 7 8 9 10; do
