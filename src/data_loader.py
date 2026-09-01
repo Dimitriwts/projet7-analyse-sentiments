@@ -27,6 +27,22 @@ from src.preprocessing import nettoyer_tweet
 
 
 # ---------------------------------------------------------------------------
+# 0. PETIT UTILITAIRE D'AFFICHAGE
+# ---------------------------------------------------------------------------
+def formater_nombre(valeur: int) -> str:
+    """
+    Formate un entier avec des espaces comme separateurs de milliers.
+
+    1596248 devient "1 596 248", plus lisible dans les sorties des notebooks.
+
+    On passe par une fonction plutot que par un `.replace(",", " ")` applique
+    a la phrase entiere : ce raccourci remplacait aussi les virgules du texte
+    autour du nombre, et produisait des phrases sans ponctuation.
+    """
+    return f"{valeur:,}".replace(",", " ")
+
+
+# ---------------------------------------------------------------------------
 # 1. LOCALISATION DU FICHIER BRUT
 # ---------------------------------------------------------------------------
 def trouver_fichier_brut() -> Path:
@@ -128,9 +144,9 @@ def charger_donnees_brutes() -> pd.DataFrame:
 
     resultat = donnees[["texte", "label"]].copy()
 
-    print(f"  {len(resultat):,} tweets charges".replace(",", " "))
-    print(f"  Negatifs : {(resultat['label'] == 0).sum():,}".replace(",", " "))
-    print(f"  Positifs : {(resultat['label'] == 1).sum():,}".replace(",", " "))
+    print(f"  {formater_nombre(len(resultat))} tweets charges")
+    print(f"  Negatifs : {formater_nombre((resultat['label'] == 0).sum())}")
+    print(f"  Positifs : {formater_nombre((resultat['label'] == 1).sum())}")
 
     return resultat
 
@@ -175,15 +191,34 @@ def preparer_donnees(forcer: bool = False) -> pd.DataFrame:
     print("\nNettoyage des tweets en cours...")
     donnees["texte_nettoye"] = donnees["texte"].apply(nettoyer_tweet)
 
+    # --- Retrait des tweets devenus vides ---------------------------------
     # Certains tweets ne contenaient QUE des liens ou des mentions : une fois
     # nettoyes, il ne reste rien. On les retire, car un texte vide n'apprend
     # rien au modele et fausserait les metriques.
     nombre_avant = len(donnees)
     donnees = donnees[donnees["texte_nettoye"].str.len() > 0].copy()
-    nombre_retires = nombre_avant - len(donnees)
+    print(f"  {formater_nombre(nombre_avant - len(donnees))} tweets vides, retires")
 
-    print(f"  {nombre_retires:,} tweets vides apres nettoyage, retires".replace(",", " "))
-    print(f"  {len(donnees):,} tweets conserves".replace(",", " "))
+    # --- Retrait des doublons ---------------------------------------------
+    # Environ 5 % des tweets nettoyes sont des textes strictement identiques :
+    # des messages courts et banals ("thanks", "good morning") et surtout du
+    # spam de robots, un meme message etant republie jusqu'a 1 500 fois.
+    #
+    # Pourquoi les retirer ? A cause d'une FUITE entre entrainement et test.
+    # Si le meme texte figure des deux cotes du decoupage, le modele l'a
+    # deja vu pendant l'entrainement : il le reconnait au lieu de le
+    # comprendre, et le score mesure sur le jeu de test devient optimiste.
+    # Le modele parait meilleur qu'il ne l'est reellement en production, ou
+    # il rencontrera des tweets inedits.
+    #
+    # `keep="first"` conserve la premiere occurrence de chaque texte. On perd
+    # 5 % des lignes, ce qui est sans consequence avec 1,6 million de tweets,
+    # et l'on gagne une evaluation honnete.
+    nombre_avant = len(donnees)
+    donnees = donnees.drop_duplicates(subset="texte_nettoye", keep="first").copy()
+    print(f"  {formater_nombre(nombre_avant - len(donnees))} doublons, retires")
+
+    print(f"  {formater_nombre(len(donnees))} tweets conserves")
 
     # Sauvegarde. `index=False` evite d'ecrire la colonne d'index de pandas,
     # qui ne sert a rien ici.
@@ -229,7 +264,7 @@ def charger_echantillon(taille: int | None = None) -> pd.DataFrame:
     donnees = pd.read_parquet(config.FICHIER_DONNEES_PREPAREES)
 
     if taille is None or taille >= len(donnees):
-        print(f"Jeu de donnees complet : {len(donnees):,} tweets".replace(",", " "))
+        print(f"Jeu de donnees complet : {formater_nombre(len(donnees))} tweets")
         return donnees
 
     # Echantillonnage stratifie : on tire la moitie dans chaque classe.
@@ -255,9 +290,9 @@ def charger_echantillon(taille: int | None = None) -> pd.DataFrame:
         .reset_index(drop=True)
     )
 
-    print(f"Echantillon stratifie : {len(echantillon):,} tweets".replace(",", " "))
-    print(f"  Negatifs : {(echantillon['label'] == 0).sum():,}".replace(",", " "))
-    print(f"  Positifs : {(echantillon['label'] == 1).sum():,}".replace(",", " "))
+    print(f"Echantillon stratifie : {formater_nombre(len(echantillon))} tweets")
+    print(f"  Negatifs : {formater_nombre((echantillon['label'] == 0).sum())}")
+    print(f"  Positifs : {formater_nombre((echantillon['label'] == 1).sum())}")
 
     return echantillon
 
@@ -304,7 +339,7 @@ def separer_train_test(donnees: pd.DataFrame, colonne_texte: str = "texte_nettoy
         stratify=y,
     )
 
-    print(f"Entrainement : {len(X_train):,} tweets".replace(",", " "))
-    print(f"Test         : {len(X_test):,} tweets".replace(",", " "))
+    print(f"Entrainement : {formater_nombre(len(X_train))} tweets")
+    print(f"Test         : {formater_nombre(len(X_test))} tweets")
 
     return X_train, X_test, y_train, y_test

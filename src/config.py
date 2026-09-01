@@ -109,8 +109,18 @@ TAILLE_VOCABULAIRE = 20_000
 
 # Longueur maximale d'un tweet en nombre de mots. Les tweets plus courts sont
 # completes par des zeros, les plus longs sont tronques.
-# 40 couvre la tres grande majorite des tweets (voir notebook 01).
-LONGUEUR_MAX_SEQUENCE = 40
+#
+# Valeur choisie sur mesure, pas au jugé (voir notebook 01). Couverture des
+# tweets NETTOYES - c'est ce que le modele voit reellement, et non le texte
+# brut, plus long puisqu'il contient encore les liens et les mentions :
+#     seuil 24 -> 94,40 %
+#     seuil 28 -> 99,46 %
+#     seuil 32 -> 99,985 %   <- retenu
+#     seuil 40 -> 99,998 %
+# Le cout de calcul d'un reseau recurrent est proportionnel a cette longueur.
+# Passer de 40 a 32 fait gagner 20 % de temps d'entrainement en ne tronquant
+# que 15 tweets sur 100 000, et encore, seulement leur fin.
+LONGUEUR_MAX_SEQUENCE = 32
 
 # Dimension des vecteurs de mots (word embeddings).
 DIMENSION_EMBEDDING = 200
