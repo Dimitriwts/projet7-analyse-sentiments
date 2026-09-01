@@ -209,6 +209,16 @@ exactement les mêmes tweets.
 
 La documentation interactive est sur http://127.0.0.1:8000/docs
 
+L'API n'a besoin que de 5 packages, listés dans `api/requirements.txt`, contre
+22 pour la modélisation. Pas de TensorFlow, pas de pandas, pas de
+scikit-learn : le modèle est servi au format TensorFlow Lite, dont le moteur
+d'exécution pèse quelques mégaoctets au lieu de 600.
+
+> **Le serveur de production doit tourner en Python 3.12.** Le moteur
+> `ai-edge-litert` n'existe pas encore pour Python 3.13 sous Linux, alors
+> qu'il existe pour 3.11 et 3.12. C'est vérifié, pas supposé. En local, sous
+> Windows, Python 3.13 fonctionne.
+
 ### Étape 4 : lancer l'interface de test
 
 ```bash

@@ -1,0 +1,41 @@
+# =============================================================================
+# Les packages de l'API en production, et rien d'autre.
+#
+# Comparez cette liste avec le requirements.txt de la racine : celui-ci
+# contient 22 packages dont TensorFlow et PyTorch, celui-la en contient 5.
+#
+# C'est volontaire, et c'est une contrainte matérielle, pas une coquetterie.
+# Le serveur Azure gratuit est limité à 1 Go de mémoire. TensorFlow pèse à lui
+# seul environ 600 Mo à l'installation et plusieurs centaines de plus une fois
+# chargé : il ne rentre pas. D'où la conversion du modèle au format
+# TensorFlow Lite, faite dans le notebook 05, qui permet de le servir avec un
+# moteur d'exécution de quelques mégaoctets.
+#
+# ATTENTION, VERSION DE PYTHON : le serveur doit tourner en Python 3.12.
+# Le moteur ai-edge-litert n'existe pas encore pour Python 3.13 sous Linux,
+# alors qu'il existe pour 3.11 et 3.12. C'est vérifié, pas supposé.
+# =============================================================================
+
+
+# --- Le serveur web ----------------------------------------------------------
+# FastAPI construit l'API, valide automatiquement les requêtes et génère la
+# documentation interactive visible sur /docs.
+fastapi==0.141.1
+# Uvicorn est le serveur qui fait réellement tourner FastAPI.
+uvicorn==0.52.4
+
+
+# --- Le calcul ---------------------------------------------------------------
+# NumPy sert uniquement à mettre la séquence de nombres dans le format attendu
+# par le modèle.
+numpy==2.5.2
+# Le moteur d'exécution TensorFlow Lite. C'est lui qui remplace TensorFlow.
+ai-edge-litert==1.4.0
+
+
+# --- Rien d'autre ------------------------------------------------------------
+# Pas de pandas : l'API traite un tweet à la fois, pas des tableaux.
+# Pas de scikit-learn : le modèle déployé est un réseau de neurones.
+# Pas de nltk ni de spacy : le nettoyage du texte n'utilise que le module `re`
+#   de la bibliothèque standard Python, c'est justement pour ça qu'il a été
+#   écrit sans dépendance.
