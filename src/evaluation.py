@@ -1,37 +1,32 @@
 """
-Evaluation des modeles : metriques et graphiques.
+Les scores et les graphiques pour évaluer les modèles.
 
-Ce module est utilise par les TROIS notebooks de modelisation. C'est
-volontaire : si chaque approche calculait ses scores a sa facon, on ne
-pourrait plus les comparer. En passant toutes par les memes fonctions, on
-garantit que le tableau comparatif final a un sens.
+Les trois notebooks de modélisation passent tous par ce fichier. C'est voulu :
+si chaque approche calculait ses scores à sa façon, je ne pourrais plus les
+comparer. En les faisant passer par les mêmes fonctions, le tableau comparatif
+final a un sens.
 
------------------------------------------------------------------------------
-CONVENTION DE CODAGE DES CLASSES
+Comment je code les classes :
+    label 0 = tweet négatif
+    label 1 = tweet positif
 
-    label 0  =  tweet NEGATIF
-    label 1  =  tweet POSITIF
+Les modèles renvoient une probabilité entre 0 et 1, qui est toujours la
+probabilité d'être positif. Un tweet est classé négatif quand cette
+probabilité passe sous le seuil de décision.
 
-Les modeles renvoient une probabilite comprise entre 0 et 1, qui est toujours
-la probabilite d'appartenir a la classe 1 (positif). Un tweet est classe
-negatif lorsque cette probabilite passe sous le seuil de decision.
------------------------------------------------------------------------------
+Quelle mesure regarder ? Comme le jeu de données est parfaitement équilibré,
+l'exactitude est déjà une mesure honnête, contrairement au cas d'un jeu
+déséquilibré.
 
-QUELLE METRIQUE REGARDER ?
+Mais le besoin d'Air Paradis n'est pas symétrique. L'entreprise veut repérer
+les bad buzz : rater un tweet négatif coûte beaucoup plus cher que signaler à
+tort un tweet positif. Dans le premier cas une crise démarre sans qu'on la
+voie venir, dans le second un chargé de communication perd trente secondes à
+lire un tweet anodin.
 
-Le jeu de donnees etant parfaitement equilibre, l'exactitude (accuracy) est
-deja une metrique honnete - contrairement au cas d'un jeu desequilibre.
-
-Mais le besoin d'Air Paradis, lui, n'est PAS symetrique. L'entreprise veut
-reperer les bad buzz : rater un tweet negatif coute beaucoup plus cher que
-signaler a tort un tweet positif. Dans le premier cas une crise demarre sans
-qu'on la voie venir ; dans le second, un charge de communication perd trente
-secondes a lire un tweet anodin.
-
-C'est donc le RAPPEL SUR LA CLASSE NEGATIVE qui traduit le mieux le besoin
-metier : parmi tous les tweets reellement negatifs, quelle proportion le
-modele a-t-il su detecter ? Toutes les fonctions ci-dessous mettent cette
-metrique en avant.
+C'est donc le rappel sur la classe négative qui traduit le mieux le besoin
+métier : parmi tous les tweets vraiment négatifs, combien le modèle en a-t-il
+attrapés ? Toutes les fonctions ci-dessous mettent cette mesure en avant.
 """
 
 import matplotlib.pyplot as plt
@@ -47,101 +42,126 @@ from sklearn.metrics import (
     roc_curve,
 )
 
-# Etiquettes lisibles, utilisees sur tous les graphiques du projet.
+# Les étiquettes lisibles, utilisées sur tous les graphiques du projet.
 NOMS_CLASSES = ["Negatif", "Positif"]
 
-# Seuil de decision par defaut. Au-dessus, le tweet est classe positif.
+# Le seuil de décision par défaut. Au-dessus, le tweet est classé positif.
 SEUIL_DECISION = 0.5
 
 
 # ---------------------------------------------------------------------------
-# 1. CALCUL DES METRIQUES
+# 1. CALCULER LES SCORES
 # ---------------------------------------------------------------------------
 def calculer_metriques(y_vrai, y_probabilites, seuil: float = SEUIL_DECISION) -> dict:
     """
-    Calcule les six metriques de reference du projet.
+    Calcule les six mesures de référence du projet.
 
-    Parametres
+    Voici ce que chacune veut dire, en français simple.
+
+    L'exactitude (accuracy) : la part de réponses justes, toutes classes
+    confondues. C'est la mesure la plus intuitive, mais elle ne dit rien sur
+    la répartition des erreurs.
+
+    L'AUC ROC : AUC veut dire "Area Under the Curve", l'aire sous la courbe, et
+    ROC vient de "Receiver Operating Characteristic", un nom hérité des radars
+    de la Seconde Guerre mondiale. Concrètement, cette mesure répond à la
+    question : si je prends au hasard un tweet positif et un tweet négatif,
+    quelle est la probabilité que le modèle donne un score plus élevé au
+    positif ? 0,5 c'est le hasard, 1,0 c'est parfait. Son gros intérêt ici :
+    elle ne dépend pas du seuil qu'on choisit, elle mesure la qualité du
+    classement produit par le modèle. Or Air Paradis voudra sans doute baisser
+    le seuil pour attraper plus de bad buzz, donc autant choisir un modèle qui
+    reste le meilleur quel que soit ce réglage.
+
+    La précision sur la classe négative : parmi les tweets que le modèle
+    signale comme négatifs, combien le sont vraiment ? Si elle est faible,
+    l'équipe communication crouler sous les fausses alertes.
+
+    Le rappel sur la classe négative : parmi les tweets vraiment négatifs,
+    combien le modèle en a-t-il attrapés ? C'est la mesure métier : un rappel
+    faible veut dire des bad buzz manqués.
+
+    Le F1 : la moyenne harmonique de la précision et du rappel. Elle résume les
+    deux en un seul chiffre, et elle ne monte que si les deux montent.
+
+    Le F1 macro : la moyenne des F1 des deux classes, un résumé équilibré.
+
+    Paramètres
     ----------
     y_vrai : array-like
         Les vrais labels (0 ou 1).
     y_probabilites : array-like
-        Probabilite predite d'appartenir a la classe 1 (positif), entre 0 et 1.
+        La probabilité prédite d'être positif, entre 0 et 1.
     seuil : float
-        Seuil de decision. Au-dessus, le tweet est classe positif.
+        Le seuil de décision.
 
     Retourne
     --------
     dict
-        Les metriques, pretes a etre envoyees telles quelles a
-        `mlflow.log_metrics()`. Les cles sont sans accent ni espace, car
-        MLflow n'accepte pas tous les caracteres dans un nom de metrique.
+        Les mesures, prêtes à être envoyées telles quelles à
+        mlflow.log_metrics(). Les clés sont sans accent ni espace, parce que
+        MLflow n'accepte pas tous les caractères dans un nom de mesure.
     """
     y_probabilites = np.asarray(y_probabilites).ravel()
     y_predit = (y_probabilites >= seuil).astype(int)
 
     return {
-        # --- Vue d'ensemble -----------------------------------------------
-        # Part de predictions correctes, toutes classes confondues.
+        # Vue d'ensemble
         "exactitude": accuracy_score(y_vrai, y_predit),
-        # Aire sous la courbe ROC. Interet particulier : elle ne depend pas du
-        # seuil choisi, et mesure donc la qualite intrinseque du classement
-        # produit par le modele. 0,5 = hasard, 1,0 = parfait.
         "auc_roc": roc_auc_score(y_vrai, y_probabilites),
-        # Moyenne des F1 des deux classes. Resume equilibre en un seul chiffre.
         "f1_macro": f1_score(y_vrai, y_predit, average="macro"),
-
-        # --- Classe NEGATIVE : la classe qui interesse le metier ----------
-        # Parmi les tweets SIGNALES comme negatifs, combien le sont vraiment ?
-        # Une precision faible sature l'equipe communication de fausses alertes.
+        # La classe négative, celle qui intéresse Air Paradis.
+        # pos_label=0 dit à scikit-learn de considérer le label 0 comme la
+        # classe d'intérêt, alors qu'il prend le label 1 par défaut.
         "precision_negatif": precision_score(y_vrai, y_predit, pos_label=0),
-        # Parmi les tweets REELLEMENT negatifs, combien ont ete detectes ?
-        # C'est LA metrique metier : un rappel faible = des bad buzz manques.
         "rappel_negatif": recall_score(y_vrai, y_predit, pos_label=0),
-        # Compromis entre les deux precedentes.
         "f1_negatif": f1_score(y_vrai, y_predit, pos_label=0),
     }
 
 
 def afficher_metriques(metriques: dict, titre: str = "Resultats") -> None:
     """
-    Affiche les metriques dans un tableau lisible en console.
+    Affiche les scores dans un tableau lisible.
 
-    Rend les sorties des notebooks comparables d'une approche a l'autre : meme
-    ordre, meme mise en forme, meme nombre de decimales.
+    Toujours le même ordre et la même mise en forme, pour que les sorties des
+    trois notebooks se comparent d'un coup d'oeil.
     """
-    print("=" * 52)
+    print("=" * 56)
     print(titre.upper())
-    print("=" * 52)
-    print(f"  Exactitude (accuracy)     : {metriques['exactitude']:.4f}")
+    print("=" * 56)
+    print(f"  Exactitude                : {metriques['exactitude']:.4f}")
     print(f"  AUC ROC                   : {metriques['auc_roc']:.4f}")
     print(f"  F1 macro                  : {metriques['f1_macro']:.4f}")
-    print("-" * 52)
-    print("  Classe NEGATIVE (bad buzz a detecter)")
+    print("-" * 56)
+    print("  Classe NEGATIVE (les bad buzz a detecter)")
     print(f"    Precision               : {metriques['precision_negatif']:.4f}")
-    print(f"    Rappel                  : {metriques['rappel_negatif']:.4f}   <-- metrique metier")
+    print(f"    Rappel                  : {metriques['rappel_negatif']:.4f}   <-- mesure metier")
     print(f"    F1                      : {metriques['f1_negatif']:.4f}")
-    print("=" * 52)
+    print("=" * 56)
 
 
 # ---------------------------------------------------------------------------
-# 2. MATRICE DE CONFUSION
+# 2. LA MATRICE DE CONFUSION
 # ---------------------------------------------------------------------------
 def tracer_matrice_confusion(y_vrai, y_probabilites, titre: str,
                              seuil: float = SEUIL_DECISION):
     """
-    Trace la matrice de confusion et renvoie la figure matplotlib.
+    Trace la matrice de confusion et renvoie le graphique.
 
-    La figure est RENVOYEE plutot qu'affichee directement : cela permet au
-    notebook de l'enregistrer comme artefact MLflow avant de l'afficher.
+    Une matrice de confusion est un tableau à quatre cases qui croise la
+    vérité et la prédiction. Elle montre non seulement combien d'erreurs le
+    modèle fait, mais surtout lesquelles.
 
-    Lecture de la matrice :
-        ligne   = la verite
-        colonne = la prediction du modele
+    Comment la lire :
+        chaque ligne   = ce que le tweet est vraiment
+        chaque colonne = ce que le modèle a répondu
 
-    La case qui compte pour Air Paradis est en haut a droite : les tweets
-    reellement negatifs que le modele a classes positifs. Ce sont les bad buzz
-    manques.
+    La case qui compte pour Air Paradis est en haut à droite : les tweets
+    vraiment négatifs que le modèle a classés positifs. Ce sont les bad buzz
+    qu'on n'aurait pas vus venir.
+
+    Je renvoie le graphique au lieu de l'afficher directement, pour que le
+    notebook puisse d'abord l'enregistrer dans MLflow puis l'afficher.
     """
     y_probabilites = np.asarray(y_probabilites).ravel()
     y_predit = (y_probabilites >= seuil).astype(int)
@@ -151,20 +171,20 @@ def tracer_matrice_confusion(y_vrai, y_probabilites, titre: str,
     figure, axe = plt.subplots(figsize=(6, 5))
     sns.heatmap(
         matrice,
-        annot=True,          # ecrire les effectifs dans les cases
-        fmt=",d",            # separateur de milliers
+        annot=True,      # écrire les nombres dans les cases
+        fmt=",d",        # avec un séparateur de milliers
         cmap="Blues",
         cbar=False,
         xticklabels=NOMS_CLASSES,
         yticklabels=NOMS_CLASSES,
         ax=axe,
     )
-    axe.set_xlabel("Prediction du modele")
-    axe.set_ylabel("Verite")
+    axe.set_xlabel("Ce que le modele a repondu")
+    axe.set_ylabel("Ce que le tweet est vraiment")
     axe.set_title(titre)
 
-    # On annote explicitement la case des bad buzz manques : c'est elle qu'il
-    # faut regarder en priorite, et elle passe facilement inapercue.
+    # J'annote la case des bad buzz manqués, parce que c'est celle qu'il faut
+    # regarder en priorité et qu'elle passe facilement inaperçue.
     negatifs_manques = matrice[0, 1]
     total_negatifs = matrice[0].sum()
     axe.text(
@@ -182,22 +202,21 @@ def tracer_matrice_confusion(y_vrai, y_probabilites, titre: str,
 
 
 # ---------------------------------------------------------------------------
-# 3. COURBE ROC
+# 3. LA COURBE ROC
 # ---------------------------------------------------------------------------
 def tracer_courbe_roc(y_vrai, y_probabilites, titre: str):
     """
-    Trace la courbe ROC et renvoie la figure matplotlib.
+    Trace la courbe ROC et renvoie le graphique.
 
     La courbe ROC montre le compromis entre les tweets positifs correctement
-    identifies et les tweets negatifs classes positifs a tort, pour TOUS les
-    seuils de decision possibles.
+    repérés et les tweets négatifs classés positifs à tort, et ce pour tous les
+    seuils de décision possibles, pas seulement 0,5.
 
-    Son interet ici : elle evalue le modele independamment du seuil. Deux
-    modeles peuvent avoir la meme exactitude a 0,5 et des courbes tres
-    differentes ; celui dont la courbe est la plus haute reste meilleur quel
-    que soit le reglage retenu ensuite.
+    Son intérêt : deux modèles peuvent avoir la même exactitude au seuil 0,5 et
+    des courbes très différentes. Celui dont la courbe monte le plus haut reste
+    meilleur quel que soit le réglage qu'on choisira ensuite.
 
-    La diagonale represente un modele qui repondrait au hasard.
+    La diagonale en pointillés représente un modèle qui répondrait au hasard.
     """
     y_probabilites = np.asarray(y_probabilites).ravel()
     taux_faux_positifs, taux_vrais_positifs, _ = roc_curve(y_vrai, y_probabilites)

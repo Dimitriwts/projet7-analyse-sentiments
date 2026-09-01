@@ -1,20 +1,19 @@
 """
-Chargement et preparation du jeu de donnees Sentiment140.
+Chargement et préparation du jeu de données.
 
-Ce module regroupe tout ce qui touche aux donnees, pour que les notebooks
-n'aient plus qu'a appeler une fonction. L'interet est double :
+Je regroupe ici tout ce qui touche aux données, pour que les notebooks n'aient
+plus qu'à appeler une fonction. Ça me sert à deux choses.
 
-  - Les trois notebooks de modelisation partent EXACTEMENT du meme jeu de
-    donnees, decoupe de la meme facon. C'est la condition pour que la
-    comparaison des trois approches soit valable.
-  - Le nettoyage des 1,6 million de tweets, qui prend une bonne minute, n'est
-    fait qu'UNE FOIS. Le resultat est sauvegarde sur le disque et les
-    notebooks suivants le rechargent instantanement.
+D'abord, les trois notebooks de modélisation partent exactement du même jeu de
+données, découpé de la même façon. Sans ça, la comparaison des trois approches
+ne voudrait rien dire.
 
-Le jeu de donnees : Sentiment140, 1 600 000 tweets collectes en 2009 et
-etiquetes automatiquement selon les emoticones qu'ils contenaient (les
-emoticones ont ensuite ete retirees du texte). Parfaitement equilibre :
-800 000 tweets negatifs, 800 000 positifs.
+Ensuite, le nettoyage des 1,6 million de tweets prend une bonne minute. Je ne
+le fais qu'une fois : le résultat est sauvegardé sur le disque et les notebooks
+suivants le rechargent en une seconde.
+
+Le jeu de données s'appelle Sentiment140. Il contient 1 600 000 tweets en
+anglais collectés en 2009, moitié positifs, moitié négatifs.
 """
 
 from pathlib import Path
@@ -27,57 +26,56 @@ from src.preprocessing import nettoyer_tweet
 
 
 # ---------------------------------------------------------------------------
-# 0. PETIT UTILITAIRE D'AFFICHAGE
+# 0. UN PETIT OUTIL D'AFFICHAGE
 # ---------------------------------------------------------------------------
 def formater_nombre(valeur: int) -> str:
     """
-    Formate un entier avec des espaces comme separateurs de milliers.
+    Écrit un nombre avec des espaces tous les trois chiffres.
 
-    1596248 devient "1 596 248", plus lisible dans les sorties des notebooks.
+    1596248 devient "1 596 248", c'est plus lisible dans les sorties.
 
-    On passe par une fonction plutot que par un `.replace(",", " ")` applique
-    a la phrase entiere : ce raccourci remplacait aussi les virgules du texte
-    autour du nombre, et produisait des phrases sans ponctuation.
+    Je passe par une fonction plutôt que par un .replace(",", " ") appliqué à
+    toute la phrase, parce que ce raccourci remplaçait aussi les virgules du
+    texte autour du nombre et cassait la ponctuation.
     """
-    return f"{valeur:,}".replace(",", " ")
+    return f"{valeur:,}".replace(",", " ")
 
 
 # ---------------------------------------------------------------------------
-# 1. LOCALISATION DU FICHIER BRUT
+# 1. TROUVER LE FICHIER DE DONNÉES
 # ---------------------------------------------------------------------------
 def trouver_fichier_brut() -> Path:
     """
-    Localise le fichier CSV du jeu de donnees dans data/raw/.
+    Cherche le fichier CSV du jeu de données dans data/raw/.
 
-    Cherche d'abord le nom officiel du dataset. S'il est absent, se rabat sur
-    n'importe quel fichier .csv present dans le dossier - le fichier est
-    parfois redistribue sous un autre nom.
+    Je cherche d'abord le nom officiel. S'il n'y est pas, je prends n'importe
+    quel fichier .csv du dossier, parce que le fichier est parfois redistribué
+    sous un autre nom.
 
     Retourne
     --------
     Path
-        Le chemin du fichier trouve.
+        Le chemin du fichier trouvé.
 
-    Leve
+    Lève
     ----
     FileNotFoundError
-        Si aucun fichier CSV n'est present, avec un message expliquant
-        precisement quoi faire.
+        Si aucun CSV n'est présent, avec un message qui explique quoi faire.
     """
-    # Cas nominal : le fichier porte son nom d'origine.
+    # Cas normal, le fichier porte son nom d'origine.
     if config.FICHIER_DATASET_BRUT.exists():
         return config.FICHIER_DATASET_BRUT
 
-    # Repli : on accepte n'importe quel CSV depose dans data/raw/.
+    # Sinon, je prends le premier CSV que je trouve.
     fichiers_csv = sorted(config.DOSSIER_DONNEES_BRUTES.glob("*.csv"))
     if fichiers_csv:
         return fichiers_csv[0]
 
-    # Rien trouve : on explique quoi faire plutot que de lever une erreur seche.
-    # Le message est construit ligne par ligne puis assemble : c'est plus lisible
-    # qu'une longue concatenation, et cela evite un piege classique de Python
-    # (dans "abc" "=" * 70, la concatenation des litteraux a lieu AVANT la
-    # multiplication, et l'on obtient 70 repetitions de "abc=").
+    # Rien trouvé. J'explique quoi faire au lieu de lever une erreur sèche.
+    # Je construis le message ligne par ligne puis je l'assemble. C'est plus
+    # lisible qu'une longue concaténation, et ça évite un piège classique de
+    # Python : dans 'abc' '=' * 70, la mise bout à bout des deux chaînes se
+    # fait AVANT la multiplication, et on obtient 70 fois "abc=".
     lignes = [
         "",
         "=" * 70,
@@ -86,46 +84,43 @@ def trouver_fichier_brut() -> Path:
         f"Aucun fichier .csv dans : {config.DOSSIER_DONNEES_BRUTES}",
         "",
         "A FAIRE :",
-        "  1. Telecharger le jeu de donnees Sentiment140 (~80 Mo compresse).",
+        "  1. Telecharger le jeu de donnees Sentiment140 (environ 80 Mo compresse).",
         "  2. Le decompresser.",
         "  3. Deposer le fichier CSV dans le dossier ci-dessus.",
         "",
         "Le fichier attendu s'appelle normalement :",
         "  training.1600000.processed.noemoticon.csv",
         "",
-        "Un autre nom fonctionne aussi : ce chargeur prend le premier .csv",
-        "qu'il trouve dans le dossier.",
+        "Un autre nom marche aussi : je prends le premier .csv du dossier.",
         "=" * 70,
     ]
     raise FileNotFoundError("\n".join(lignes))
 
 
 # ---------------------------------------------------------------------------
-# 2. LECTURE DU FICHIER BRUT
+# 2. LIRE LE FICHIER
 # ---------------------------------------------------------------------------
 def charger_donnees_brutes() -> pd.DataFrame:
     """
-    Lit le fichier CSV brut et renvoie un tableau exploitable.
+    Lit le fichier CSV et renvoie un tableau utilisable.
 
-    Deux specificites du fichier Sentiment140 sont prises en charge ici :
-
-      - Il n'a PAS de ligne d'en-tete. Sans `header=None`, pandas prendrait
-        le premier tweet pour les noms de colonnes et on perdrait une ligne.
-      - Il n'est pas en UTF-8. Certains octets feraient echouer la lecture ;
-        l'encodage latin-1 les accepte tous.
+    Deux particularités du fichier sont gérées ici. Il n'a pas de ligne de
+    titre, donc sans header=None pandas prendrait le premier tweet pour les
+    noms de colonnes et on perdrait une ligne. Et il n'est pas en UTF-8, donc
+    je précise l'encodage latin-1 sinon la lecture plante.
 
     Retourne
     --------
     pd.DataFrame
         Deux colonnes seulement :
-          - `texte`  : le texte brut du tweet
-          - `label`  : 0 pour negatif, 1 pour positif
+          texte : le texte brut du tweet
+          label : 0 pour négatif, 1 pour positif
 
-    Note : les quatre autres colonnes du fichier (identifiant, date, requete,
-    utilisateur) sont ecartees. Le projet demande de predire le sentiment a
-    partir du seul contenu du tweet : l'API ne recevra qu'un texte, elle
-    n'aura ni la date ni l'auteur. Entrainer le modele sur des informations
-    indisponibles en production n'aurait aucun sens.
+    Je laisse tomber les quatre autres colonnes du fichier (identifiant, date,
+    requête, utilisateur). Le projet demande de prédire le sentiment à partir
+    du seul contenu du tweet, et l'API ne recevra qu'un texte : ni la date, ni
+    l'auteur. Entraîner le modèle sur des informations qu'il n'aura pas en
+    production n'aurait aucun sens.
     """
     chemin = trouver_fichier_brut()
     print(f"Lecture de : {chemin.name}")
@@ -137,9 +132,9 @@ def charger_donnees_brutes() -> pd.DataFrame:
         names=config.COLONNES_DATASET,
     )
 
-    # Conversion de la polarite brute (0 / 4) en label binaire (0 / 1).
-    # On passe par une comparaison booleenne convertie en entier : c'est plus
-    # rapide et plus lisible qu'un dictionnaire de correspondance.
+    # Je convertis la polarité d'origine (0 ou 4) en label 0 ou 1.
+    # La comparaison donne True ou False, que .astype(int) transforme en 1 ou 0.
+    # C'est plus rapide et plus court qu'un dictionnaire de correspondance.
     donnees["label"] = (donnees["polarite"] == config.POLARITE_POSITIVE_BRUTE).astype(int)
 
     resultat = donnees[["texte", "label"]].copy()
@@ -152,35 +147,34 @@ def charger_donnees_brutes() -> pd.DataFrame:
 
 
 # ---------------------------------------------------------------------------
-# 3. PREPARATION (nettoyage) - a executer une seule fois
+# 3. PRÉPARER LES DONNÉES, UNE SEULE FOIS
 # ---------------------------------------------------------------------------
 def preparer_donnees(forcer: bool = False) -> pd.DataFrame:
     """
-    Nettoie l'integralite des tweets et sauvegarde le resultat sur le disque.
+    Nettoie tous les tweets et sauvegarde le résultat sur le disque.
 
-    Cette operation prend environ une minute sur 1,6 million de tweets. Elle
-    n'est donc faite qu'une fois : le resultat est ecrit au format Parquet,
-    et tous les appels suivants se contentent de relire ce fichier (moins
-    d'une seconde).
+    Ça prend environ une minute sur 1,6 million de tweets, donc je ne le fais
+    qu'une fois. Le résultat est écrit au format Parquet et les appels suivants
+    se contentent de relire ce fichier.
 
-    Le format Parquet est choisi plutot que le CSV parce qu'il est compresse
-    (environ 5 fois plus leger), qu'il se relit beaucoup plus vite, et qu'il
-    conserve les types des colonnes sans avoir a les redeclarer.
+    Parquet est un format de tableau compressé. Je le préfère au CSV parce
+    qu'il est environ cinq fois plus léger, beaucoup plus rapide à relire, et
+    qu'il garde le type de chaque colonne sans que j'aie à le redéclarer.
 
-    Parametres
+    Paramètres
     ----------
     forcer : bool
-        Si True, refait le nettoyage meme si le fichier prepare existe deja.
-        Utile apres avoir modifie `src/preprocessing.py`.
+        Si True, refait le nettoyage même si le fichier existe déjà. Utile
+        après avoir modifié src/preprocessing.py.
 
     Retourne
     --------
     pd.DataFrame
-        Colonnes : `texte` (brut), `texte_nettoye`, `label`.
+        Colonnes : texte (brut), label, texte_nettoye.
     """
     fichier_prepare = config.FICHIER_DONNEES_PREPAREES
 
-    # Si le travail a deja ete fait, on ne le refait pas.
+    # Si le travail a déjà été fait, je ne le refais pas.
     if fichier_prepare.exists() and not forcer:
         print(f"Fichier prepare deja present : {fichier_prepare.name}")
         print("  (utiliser preparer_donnees(forcer=True) pour le regenerer)")
@@ -191,37 +185,38 @@ def preparer_donnees(forcer: bool = False) -> pd.DataFrame:
     print("\nNettoyage des tweets en cours...")
     donnees["texte_nettoye"] = donnees["texte"].apply(nettoyer_tweet)
 
-    # --- Retrait des tweets devenus vides ---------------------------------
-    # Certains tweets ne contenaient QUE des liens ou des mentions : une fois
-    # nettoyes, il ne reste rien. On les retire, car un texte vide n'apprend
-    # rien au modele et fausserait les metriques.
+    # Je retire les tweets devenus vides.
+    # Certains ne contenaient que des liens ou des mentions : une fois
+    # nettoyés, il ne reste rien. Un texte vide n'apprend rien au modèle et
+    # fausserait les scores.
     nombre_avant = len(donnees)
     donnees = donnees[donnees["texte_nettoye"].str.len() > 0].copy()
     print(f"  {formater_nombre(nombre_avant - len(donnees))} tweets vides, retires")
 
-    # --- Retrait des doublons ---------------------------------------------
-    # Environ 5 % des tweets nettoyes sont des textes strictement identiques :
-    # des messages courts et banals ("thanks", "good morning") et surtout du
-    # spam de robots, un meme message etant republie jusqu'a 1 500 fois.
+    # Je retire les doublons.
+    # Environ 5 % des tweets nettoyés sont des textes strictement identiques :
+    # des messages courts et banals comme "thanks" ou "good morning", et
+    # surtout du spam de robots, le même message republié jusqu'à 1 500 fois.
     #
-    # Pourquoi les retirer ? A cause d'une FUITE entre entrainement et test.
-    # Si le meme texte figure des deux cotes du decoupage, le modele l'a
-    # deja vu pendant l'entrainement : il le reconnait au lieu de le
-    # comprendre, et le score mesure sur le jeu de test devient optimiste.
-    # Le modele parait meilleur qu'il ne l'est reellement en production, ou
-    # il rencontrera des tweets inedits.
+    # Pourquoi les enlever : à cause d'une fuite entre l'entraînement et le
+    # test. Le découpage entre les deux se fait au hasard, donc si un même
+    # texte apparaît 500 fois, il se retrouvera forcément des deux côtés. Le
+    # modèle l'aura déjà vu à l'entraînement, il le reconnaît au lieu de le
+    # comprendre, et le score du test devient trop beau. Le modèle paraît
+    # meilleur qu'il ne le sera en production, où il ne verra que des tweets
+    # nouveaux.
     #
-    # `keep="first"` conserve la premiere occurrence de chaque texte. On perd
-    # 5 % des lignes, ce qui est sans consequence avec 1,6 million de tweets,
-    # et l'on gagne une evaluation honnete.
+    # keep="first" garde la première occurrence de chaque texte. Je perds 5 %
+    # des lignes, ce qui n'a aucune importance avec 1,6 million de tweets, et
+    # je gagne une évaluation honnête.
     nombre_avant = len(donnees)
     donnees = donnees.drop_duplicates(subset="texte_nettoye", keep="first").copy()
     print(f"  {formater_nombre(nombre_avant - len(donnees))} doublons, retires")
 
     print(f"  {formater_nombre(len(donnees))} tweets conserves")
 
-    # Sauvegarde. `index=False` evite d'ecrire la colonne d'index de pandas,
-    # qui ne sert a rien ici.
+    # Sauvegarde. index=False évite d'écrire la colonne d'index de pandas, qui
+    # ne sert à rien ici.
     fichier_prepare.parent.mkdir(parents=True, exist_ok=True)
     donnees.to_parquet(fichier_prepare, index=False)
     print(f"\nSauvegarde : {fichier_prepare}")
@@ -230,29 +225,29 @@ def preparer_donnees(forcer: bool = False) -> pd.DataFrame:
 
 
 # ---------------------------------------------------------------------------
-# 4. CHARGEMENT D'UN ECHANTILLON
+# 4. PRENDRE UN ÉCHANTILLON
 # ---------------------------------------------------------------------------
 def charger_echantillon(taille: int | None = None) -> pd.DataFrame:
     """
-    Recharge les donnees preparees, eventuellement reduites a un echantillon.
+    Recharge les données préparées, éventuellement réduites à un échantillon.
 
-    L'echantillonnage est STRATIFIE : on prend autant de tweets negatifs que
-    de positifs. Un tirage purement aleatoire donnerait des proportions
-    legerement differentes a chaque taille, ce qui rendrait les scores des
-    trois approches un peu moins comparables entre eux.
+    Le tirage est stratifié, c'est-à-dire que je prends autant de tweets
+    négatifs que de positifs. Un tirage complètement au hasard donnerait des
+    proportions un peu différentes à chaque taille, et les scores des trois
+    approches seraient un peu moins comparables entre eux.
 
-    Le tirage utilise la graine aleatoire du projet : deux appels avec la
-    meme taille renvoient exactement les memes tweets.
+    Le tirage utilise la graine aléatoire du projet : deux appels avec la même
+    taille renvoient exactement les mêmes tweets.
 
-    Parametres
+    Paramètres
     ----------
     taille : int ou None
-        Nombre total de tweets voulu. None = tout le jeu de donnees.
+        Nombre total de tweets voulu. None veut dire tout le jeu de données.
 
     Retourne
     --------
     pd.DataFrame
-        Colonnes : `texte`, `texte_nettoye`, `label`.
+        Colonnes : texte, label, texte_nettoye.
     """
     if not config.FICHIER_DONNEES_PREPAREES.exists():
         raise FileNotFoundError(
@@ -267,10 +262,9 @@ def charger_echantillon(taille: int | None = None) -> pd.DataFrame:
         print(f"Jeu de donnees complet : {formater_nombre(len(donnees))} tweets")
         return donnees
 
-    # Echantillonnage stratifie : on tire la moitie dans chaque classe.
-    # On procede classe par classe avec une simple boucle plutot qu'avec un
-    # groupby : c'est plus long d'une ligne, mais on voit exactement ce qui
-    # se passe, et cela n'utilise aucune API pandas en cours d'obsolescence.
+    # Tirage stratifié : je prends la moitié dans chaque classe.
+    # J'utilise une boucle plutôt qu'un groupby : c'est une ligne de plus mais
+    # on voit exactement ce qui se passe.
     taille_par_classe = taille // 2
     morceaux = []
     for valeur_label in (0, 1):
@@ -284,8 +278,8 @@ def charger_echantillon(taille: int | None = None) -> pd.DataFrame:
 
     echantillon = (
         pd.concat(morceaux)
-        # On remelange : sinon tous les negatifs seraient devant tous les
-        # positifs, ce qui perturberait l'entrainement par lots (batches).
+        # Je remélange, sinon tous les négatifs seraient devant tous les
+        # positifs, ce qui perturberait l'entraînement par petits paquets.
         .sample(frac=1.0, random_state=config.GRAINE_ALEATOIRE)
         .reset_index(drop=True)
     )
@@ -298,35 +292,34 @@ def charger_echantillon(taille: int | None = None) -> pd.DataFrame:
 
 
 # ---------------------------------------------------------------------------
-# 5. DECOUPAGE ENTRAINEMENT / TEST
+# 5. DÉCOUPER EN ENTRAÎNEMENT ET TEST
 # ---------------------------------------------------------------------------
 def separer_train_test(donnees: pd.DataFrame, colonne_texte: str = "texte_nettoye"):
     """
-    Separe le jeu de donnees en un jeu d'entrainement et un jeu de test.
+    Sépare le jeu de données en un jeu d'entraînement et un jeu de test.
 
-    Le decoupage est stratifie (meme proportion de positifs de chaque cote)
-    et utilise la graine du projet, donc reproductible a l'identique.
+    Le découpage est stratifié (même proportion de positifs des deux côtés) et
+    utilise la graine du projet, donc il est reproductible à l'identique.
 
-    Le jeu de test n'est utilise QU'A LA FIN, pour mesurer la performance
-    finale. Tous les reglages (choix d'hyperparametres, arret anticipe) se
-    font sur une portion du jeu d'entrainement. Sans cette discipline, on
-    finit par choisir le modele qui colle le mieux au jeu de test, et le
-    score annonce devient optimiste.
+    Le jeu de test ne sert qu'à la toute fin, pour mesurer la performance
+    finale. Tous les réglages se font sur une partie du jeu d'entraînement.
+    Sans cette discipline, on finit par choisir le modèle qui colle le mieux au
+    jeu de test, et le score annoncé devient trop optimiste.
 
-    Parametres
+    Paramètres
     ----------
     donnees : pd.DataFrame
-        Le jeu de donnees, contenant au minimum `colonne_texte` et `label`.
+        Le jeu de données, avec au minimum colonne_texte et label.
     colonne_texte : str
-        Colonne a utiliser comme entree. "texte_nettoye" par defaut ;
-        le notebook BERT utilise "texte" car BERT a son propre
-        pretraitement interne.
+        La colonne à utiliser en entrée. "texte_nettoye" par défaut. Le
+        notebook BERT utilise "texte" parce que BERT a son propre
+        prétraitement interne.
 
     Retourne
     --------
     tuple
-        (X_train, X_test, y_train, y_test), ou les X sont des Series de
-        textes et les y des Series de labels 0/1.
+        (X_train, X_test, y_train, y_test). Les X sont des séries de textes,
+        les y des séries de labels 0 ou 1.
     """
     X = donnees[colonne_texte]
     y = donnees["label"]

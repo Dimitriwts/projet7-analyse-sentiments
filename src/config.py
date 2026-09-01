@@ -1,29 +1,28 @@
 """
-Configuration centrale du projet.
+Toutes les constantes du projet au même endroit.
 
-Tous les chemins de fichiers et toutes les constantes de modelisation sont
-definis ICI, et nulle part ailleurs. Les notebooks, les scripts et l'API
-importent ce module plutot que de recopier des chemins en dur.
+Les notebooks, les scripts et l'API importent ce fichier au lieu de recopier
+des chemins et des réglages un peu partout.
 
-Pourquoi ? Parce qu'une experimentation n'est reproductible que si l'on sait
-exactement avec quels parametres elle a tourne. En centralisant, on evite le
-grand classique du projet de data science : deux notebooks qui utilisent en
-douce deux tailles d'echantillon differentes, et des scores incomparables.
+Pourquoi je fais ça : si la taille du vocabulaire est écrite en dur dans trois
+notebooks et que j'en modifie deux, le troisième continue de tourner avec
+l'ancienne valeur et je compare des scores qui ne veulent plus rien dire.
+En centralisant, je change une ligne et tout le projet suit.
 """
 
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
-# 1. CHEMINS DU PROJET
+# 1. LES CHEMINS DU PROJET
 # ---------------------------------------------------------------------------
-# Path(__file__) = ce fichier (src/config.py)
-#   .resolve()   = son chemin absolu
-#   .parent      = le dossier src/
-#   .parent      = la racine du projet
+# Path(__file__) désigne ce fichier, c'est-à-dire src/config.py.
+#   .resolve()  donne son chemin complet
+#   .parent     remonte au dossier src/
+#   .parent     remonte encore, à la racine du projet
 #
-# On procede ainsi plutot qu'avec un chemin ecrit en dur : le projet
-# fonctionne alors quel que soit l'endroit ou il est clone, et quel que soit
-# le dossier depuis lequel on lance Python.
+# Je passe par là plutôt que d'écrire "C:/Users/..." en dur, pour deux raisons :
+# le projet marche sur n'importe quelle machine, et il marche quel que soit le
+# dossier depuis lequel je lance Python.
 RACINE_PROJET = Path(__file__).resolve().parent.parent
 
 DOSSIER_DONNEES = RACINE_PROJET / "data"
@@ -35,126 +34,157 @@ DOSSIER_API = RACINE_PROJET / "api"
 DOSSIER_ARTEFACTS_API = DOSSIER_API / "artefacts"
 DOSSIER_DOCS = RACINE_PROJET / "docs"
 
-# Fichier brut attendu : le dataset Sentiment140 tel qu'il est distribue.
-# Si votre fichier porte un autre nom, le chargeur (src/data_loader.py) le
-# detectera automatiquement dans data/raw/ et vous le signalera.
+# Le fichier de données tel qu'on le télécharge. Si le vôtre porte un autre
+# nom, le chargeur (src/data_loader.py) va quand même le trouver et vous
+# le dire.
 FICHIER_DATASET_BRUT = DOSSIER_DONNEES_BRUTES / "training.1600000.processed.noemoticon.csv"
 
-# Echantillon nettoye, produit une seule fois par le notebook d'exploration
-# puis reutilise tel quel par les trois notebooks de modelisation.
-# C'est la garantie que les trois approches sont comparees sur EXACTEMENT
-# les memes tweets.
+# Le fichier de travail, produit une seule fois par le notebook 01 et relu
+# ensuite par les trois notebooks de modélisation. C'est ce qui garantit que
+# les trois approches travaillent sur exactement les mêmes tweets.
 FICHIER_DONNEES_PREPAREES = DOSSIER_DONNEES_PREPAREES / "tweets_prepares.parquet"
 
 
 # ---------------------------------------------------------------------------
-# 2. REPRODUCTIBILITE
+# 2. LA GRAINE ALÉATOIRE
 # ---------------------------------------------------------------------------
-# Une seule graine aleatoire pour tout le projet : melange des donnees,
-# decoupage train/test, initialisation des poids des reseaux de neurones.
-# Relancer un notebook doit redonner le meme resultat.
+# Beaucoup d'opérations en apprentissage automatique tirent au sort : quels
+# tweets vont dans le jeu de test, dans quel ordre on les présente au modèle,
+# avec quelles valeurs de départ on initialise un réseau de neurones.
+#
+# Une "graine" (seed en anglais) est un nombre qui sert de point de départ au
+# tirage au sort. Si je fixe la graine, le tirage donne toujours le même
+# résultat. Sans ça, je relance un notebook et j'obtiens un score légèrement
+# différent, sans savoir si c'est mon changement qui a agi ou juste le hasard.
+#
+# 42 est une valeur arbitraire, c'est une convention très répandue.
 GRAINE_ALEATOIRE = 42
 
 
 # ---------------------------------------------------------------------------
-# 3. STRUCTURE DU DATASET SENTIMENT140
+# 3. À QUOI RESSEMBLE LE FICHIER DE DONNÉES
 # ---------------------------------------------------------------------------
-# Le fichier CSV n'a PAS de ligne d'en-tete : on doit donner les noms nous-memes.
-# Les 6 colonnes, dans l'ordre, sont documentees par les auteurs du dataset.
+# Le fichier CSV (Comma-Separated Values, un tableau où les colonnes sont
+# séparées par des virgules) n'a pas de ligne de titre. Il faut donc donner
+# les noms des colonnes soi-même, dans l'ordre où elles apparaissent.
 COLONNES_DATASET = ["polarite", "identifiant", "date", "requete", "utilisateur", "texte"]
 
-# La colonne "polarite" vaut 0 (negatif) ou 4 (positif) dans le fichier brut.
-# On la convertit en label binaire classique 0/1.
+# Dans le fichier d'origine, la colonne "polarite" vaut 0 pour un tweet négatif
+# et 4 pour un tweet positif. Je convertis ensuite en 0 et 1, qui est la façon
+# habituelle de coder deux classes.
 POLARITE_NEGATIVE_BRUTE = 0
 POLARITE_POSITIVE_BRUTE = 4
 
-# Encodage du fichier : le dataset contient des caracteres non-UTF8
-# (accents mal encodes, caracteres de controle). latin-1 accepte tous les
-# octets sans lever d'erreur, c'est l'encodage recommande pour ce fichier.
+# L'encodage, c'est la façon dont les caractères sont traduits en octets dans
+# le fichier. Ce fichier n'est pas en UTF-8 (l'encodage moderne standard) et
+# contient des octets qui feraient planter la lecture. L'encodage latin-1
+# accepte tous les octets sans broncher, c'est celui qui est recommandé pour
+# ce jeu de données.
 ENCODAGE_DATASET = "latin-1"
 
 
 # ---------------------------------------------------------------------------
-# 4. TAILLES D'ECHANTILLON PAR APPROCHE
+# 4. COMBIEN DE TWEETS POUR CHAQUE APPROCHE
 # ---------------------------------------------------------------------------
-# Le dataset complet fait 1,6 million de tweets. Les trois approches n'ont
-# pas du tout le meme cout de calcul, donc pas la meme taille d'echantillon.
-# Ces valeurs sont volontairement calibrees pour que chaque entrainement
-# tienne en quelques minutes sur un processeur, sans carte graphique.
-#
-# Ces chiffres seront ajustes apres une mesure reelle du temps de calcul
-# (voir le notebook 03) : on ne devine pas, on mesure.
+# Le jeu de données complet fait 1,6 million de tweets. Les trois approches ne
+# coûtent pas du tout le même temps de calcul, donc je ne leur donne pas la
+# même quantité de données. Ces valeurs sont calibrées pour que chaque
+# entraînement tienne en quelques minutes sur un processeur ordinaire, sans
+# carte graphique dédiée.
 
-# Approche 1 - Modele classique (TF-IDF + regression logistique).
-# Tres peu couteux : on peut se permettre l'integralite du dataset.
-TAILLE_ECHANTILLON_CLASSIQUE = None  # None = tout le dataset
+# Approche 1, le modèle classique. Très rapide, je peux tout lui donner.
+TAILLE_ECHANTILLON_CLASSIQUE = None  # None veut dire "tout le jeu de données"
 
-# Approche 2 - Modele avance sur mesure (word embeddings + reseau recurrent).
+# Approche 2, le réseau de neurones sur mesure.
 TAILLE_ECHANTILLON_AVANCE = 300_000
 
-# Approche 3 - Modele BERT.
-# De loin le plus couteux : un modele pre-entraine de 66 millions de parametres.
+# Approche 3, BERT. De loin la plus lourde : c'est un modèle déjà entraîné qui
+# contient des dizaines de millions de paramètres.
 TAILLE_ECHANTILLON_BERT = 50_000
 
-# Part des donnees reservee au test final, identique pour les trois approches.
+# Part des tweets mise de côté pour le test final. La même pour les trois
+# approches, sinon la comparaison ne veut rien dire.
 PROPORTION_TEST = 0.2
 
 
 # ---------------------------------------------------------------------------
-# 5. PARAMETRES DU MODELE AVANCE (reseau de neurones sur mesure)
+# 5. RÉGLAGES DU MODÈLE AVANCÉ (le réseau de neurones sur mesure)
 # ---------------------------------------------------------------------------
-# Nombre de mots conserves dans le vocabulaire. Au-dela, les mots trop rares
-# apportent surtout du bruit et alourdissent inutilement le modele.
+# Le vocabulaire, c'est la liste des mots que le modèle connaît. Je la limite
+# aux 20 000 mots les plus fréquents. Au-delà, on tombe sur des mots vus deux
+# ou trois fois en tout : ils apportent surtout du bruit et alourdissent le
+# modèle pour rien.
 TAILLE_VOCABULAIRE = 20_000
 
-# Longueur maximale d'un tweet en nombre de mots. Les tweets plus courts sont
-# completes par des zeros, les plus longs sont tronques.
+# Un réseau de neurones récurrent lit le tweet mot par mot, mais il a besoin
+# que tous les tweets fassent la même longueur. Les plus courts sont complétés
+# par des zéros, les plus longs sont coupés.
 #
-# Valeur choisie sur mesure, pas au jugé (voir notebook 01). Couverture des
-# tweets NETTOYES - c'est ce que le modele voit reellement, et non le texte
-# brut, plus long puisqu'il contient encore les liens et les mentions :
-#     seuil 24 -> 94,40 %
-#     seuil 28 -> 99,46 %
-#     seuil 32 -> 99,985 %   <- retenu
-#     seuil 40 -> 99,998 %
-# Le cout de calcul d'un reseau recurrent est proportionnel a cette longueur.
-# Passer de 40 a 32 fait gagner 20 % de temps d'entrainement en ne tronquant
-# que 15 tweets sur 100 000, et encore, seulement leur fin.
+# Valeur choisie sur mesure, pas au hasard (voir le notebook 01). Voici la
+# part des tweets nettoyés qui tiennent entièrement, selon le seuil :
+#     24 mots  ->  94,40 %
+#     28 mots  ->  99,46 %
+#     32 mots  ->  99,985 %   <- ce que je retiens
+#     40 mots  ->  99,998 %
+# Le temps de calcul d'un réseau récurrent est proportionnel à cette longueur.
+# Passer de 40 à 32 fait gagner 20 % de temps et ne coupe la fin que de
+# 15 tweets sur 100 000.
 LONGUEUR_MAX_SEQUENCE = 32
 
-# Dimension des vecteurs de mots (word embeddings).
+# Un "embedding" (plongement lexical en français, mais tout le monde dit
+# embedding) est la façon de représenter un mot par une liste de nombres.
+# Au lieu de dire "le mot terrible est le numéro 4271", on dit "le mot
+# terrible, c'est ce vecteur de 200 nombres". L'intérêt : deux mots de sens
+# proche ont des vecteurs proches, donc le modèle peut généraliser de "awful"
+# à "terrible" même s'il a peu vu le second.
+# 200 est un compromis courant entre finesse et taille du modèle.
 DIMENSION_EMBEDDING = 200
 
-# Token utilise pour tout mot absent du vocabulaire.
+# Quand l'API reçoit un mot qui n'était pas dans le vocabulaire d'entraînement,
+# il faut bien lui donner quelque chose. On le remplace par ce jeton spécial.
+# OOV veut dire "out of vocabulary", hors vocabulaire.
 TOKEN_MOT_INCONNU = "<INCONNU>"
 
 
 # ---------------------------------------------------------------------------
-# 6. PARAMETRES DU MODELE BERT
+# 6. RÉGLAGES DU MODÈLE BERT
 # ---------------------------------------------------------------------------
-# DistilBERT : version allegee de BERT (40 % plus petite, 60 % plus rapide,
-# environ 97 % des performances). Le choix raisonnable sans carte graphique.
+# BERT (Bidirectional Encoder Representations from Transformers) est un modèle
+# de langue publié par Google en 2018. Il a été entraîné sur des milliards de
+# mots à deviner des mots masqués dans des phrases, et il a ainsi appris le
+# fonctionnement de l'anglais. On le récupère déjà entraîné et on l'adapte à
+# notre tâche : c'est ce qu'on appelle le transfert d'apprentissage.
+#
+# DistilBERT est une version allégée de BERT : 40 % plus petite, 60 % plus
+# rapide, et elle conserve environ 97 % des performances. Sans carte graphique,
+# c'est le seul choix raisonnable.
 NOM_MODELE_BERT = "distilbert-base-uncased"
 
-# Longueur maximale en tokens BERT. Le cout de calcul de BERT croit avec le
-# carre de cette valeur : la garder basse est le principal levier de rapidite.
+# Longueur maximale du texte donné à BERT, en jetons. Le coût de calcul de
+# BERT augmente comme le carré de cette valeur : la garder basse est le
+# principal levier pour que ça tourne vite.
 LONGUEUR_MAX_BERT = 64
 
 
 # ---------------------------------------------------------------------------
-# 7. SUIVI DES EXPERIMENTATIONS (MLflow)
+# 7. SUIVI DES EXPÉRIMENTATIONS AVEC MLFLOW
 # ---------------------------------------------------------------------------
-# Adresse du serveur MLflow local, lance par la commande documentee dans le
-# README. On passe par un serveur (et non par de simples fichiers) car le
-# Model Registry - la "centralisation du stockage des modeles" - exige une
-# base de donnees comme support.
+# MLflow est l'outil qui garde la trace de chaque entraînement : les réglages
+# utilisés, les scores obtenus, le temps passé, et le modèle lui-même. Sans
+# lui, au bout de quinze essais je ne sais plus lequel était le meilleur ni
+# avec quels réglages je l'avais obtenu.
+#
+# Adresse du serveur MLflow qui tourne en local. La commande pour le lancer
+# est dans le README.
 URI_SUIVI_MLFLOW = "http://127.0.0.1:5000"
 
-# Un nom d'experience par approche : les runs restent ranges et comparables.
+# Une "expérience" MLflow est simplement un dossier de résultats. J'en fais
+# une par approche pour que les essais restent rangés.
 EXPERIENCE_CLASSIQUE = "01_modele_classique"
 EXPERIENCE_AVANCE = "02_modele_avance"
 EXPERIENCE_BERT = "03_modele_bert"
 
-# Nom sous lequel le modele retenu est enregistre dans le Model Registry.
-# C'est ce modele-la que l'API sert en production.
+# Nom sous lequel le modèle retenu est rangé dans le Model Registry de MLflow.
+# Le Model Registry est le catalogue des modèles : il leur donne un numéro de
+# version et permet de désigner celui qui part en production.
 NOM_MODELE_ENREGISTRE = "analyse-sentiment-air-paradis"

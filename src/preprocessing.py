@@ -1,66 +1,62 @@
 """
-Nettoyage du texte des tweets.
+Le nettoyage du texte des tweets.
 
-=============================================================================
-CE FICHIER EST LA SOURCE DE VERITE DU PRETRAITEMENT.
-=============================================================================
+C'est le fichier le plus important du projet, et voici pourquoi.
 
-Il est utilise a DEUX moments distincts :
-
-  1. A l'entrainement, dans les notebooks, pour nettoyer les 1,6 million de
-     tweets du jeu de donnees.
+Il sert à deux moments :
+  1. Pendant l'entraînement, pour nettoyer les 1,6 million de tweets.
   2. En production, dans l'API, pour nettoyer le tweet que l'utilisateur
-     vient de saisir.
+     vient de taper.
 
-Ces deux nettoyages doivent etre RIGOUREUSEMENT identiques. Si l'API nettoie
-ne serait-ce qu'un peu differemment, le modele recoit en production un texte
-qui ne ressemble pas a ce qu'il a vu a l'entrainement, et ses predictions se
-degradent sans qu'aucune erreur ne soit levee. C'est un piege classique de la
-mise en production, appele "training/serving skew" (litteralement : decalage
-entre entrainement et service).
+Ces deux nettoyages doivent être exactement identiques. Si l'API nettoie ne
+serait-ce qu'un tout petit peu différemment, le modèle reçoit en production un
+texte qui ne ressemble pas à ce qu'il a vu à l'entraînement, et ses réponses
+se dégradent sans qu'aucune erreur ne s'affiche nulle part. C'est un piège
+classique de la mise en production, on l'appelle le "training/serving skew",
+littéralement le décalage entre l'entraînement et le service.
 
-Pour garantir cette identite, le fichier est copie automatiquement dans le
-dossier api/ par le pipeline de deploiement, et un test unitaire verifie que
-les deux copies sont bien identiques (voir tests/test_preprocessing.py).
+Pour être sûr que les deux versions restent identiques, ce fichier est recopié
+automatiquement dans le dossier api/ par le pipeline de déploiement, et un test
+vérifie que les deux copies sont bien les mêmes.
 
------------------------------------------------------------------------------
-CONTRAINTE TECHNIQUE : ce module n'importe QUE la bibliotheque standard
-Python (le module `re` des expressions regulieres, et rien d'autre).
-
-Pourquoi ? Parce que l'API tourne sur un serveur Azure gratuit limite a
-1 Go de memoire. Chaque dependance ajoutee (nltk, spacy, pandas...) alourdit
-le demarrage et rapproche du plafond. Un nettoyage de texte n'a besoin
-d'aucune bibliotheque : autant s'en passer.
------------------------------------------------------------------------------
+Une contrainte technique importante : ce fichier n'importe que "re", le module
+d'expressions régulières livré avec Python. Aucune bibliothèque extérieure.
+La raison est que l'API tourne sur un serveur Azure gratuit limité à 1 Go de
+mémoire. Chaque bibliothèque ajoutée (nltk, spacy, pandas) alourdit le
+démarrage et rapproche du plafond. Nettoyer du texte ne demande aucune
+bibliothèque, autant s'en passer.
 """
 
 import re
 
 # ---------------------------------------------------------------------------
-# 1. MOTS VIDES ("stop words")
+# 1. LES MOTS VIDES
 # ---------------------------------------------------------------------------
-# Les mots vides sont les mots trop frequents pour porter du sens : articles,
-# pronoms, auxiliaires. Les retirer allege le vocabulaire du modele classique.
+# Les mots vides (stop words en anglais) sont les mots trop courants pour
+# porter du sens à eux seuls : les articles, les pronoms, les auxiliaires.
+# Les retirer allège le vocabulaire du modèle classique.
 #
-# ATTENTION - POINT CRUCIAL POUR L'ANALYSE DE SENTIMENT :
-# Les listes de mots vides standard (celle de NLTK par exemple) contiennent
-# les negations : "not", "no", "never", "nor". Or "this flight was not good"
-# devient "flight good" une fois ces mots retires : le sens est INVERSE.
+# Attention, et c'est le point crucial de tout ce projet : les listes de mots
+# vides toutes faites, comme celle de la bibliothèque NLTK, contiennent les
+# négations "not", "no", "never", "nor". Or si je retire "not" de la phrase
+# "this flight was not good", il reste "flight good", et le sens est
+# exactement inversé. Le modèle apprendrait alors le contraire de ce qu'il
+# faut.
 #
-# La liste ci-dessous est donc une liste standard EXPURGEE de tout ce qui
-# porte du sentiment. On conserve volontairement :
-#   - les negations      : not, no, never, nor, none, cannot, n't...
-#   - les intensificateurs : very, too, so, more, most, really, quite...
-#   - les contrastifs    : but, however, although
+# La liste ci-dessous est donc une liste classique dont j'ai retiré tout ce
+# qui porte du sentiment. Je garde volontairement :
+#   les négations        : not, no, never, nor, none, cannot, don't...
+#   les intensificateurs : very, too, so, really, quite...
+#   les mots d'opposition : but, however, although
 #
-# Ces mots sont peu nombreux mais ils changent radicalement la polarite
-# d'une phrase : les supprimer ferait perdre plusieurs points de performance.
+# Ils sont peu nombreux mais ils changent complètement la polarité d'une
+# phrase. Les supprimer coûterait plusieurs points de score.
 MOTS_VIDES = frozenset(
     {
-        # Articles et determinants
+        # Articles et déterminants
         "a", "an", "the", "this", "that", "these", "those",
         "some", "any", "each", "every", "another", "other", "such",
-        # Pronoms personnels et possessifs
+        # Pronoms
         "i", "me", "my", "mine", "myself",
         "you", "your", "yours", "yourself", "yourselves",
         "he", "him", "his", "himself",
@@ -68,20 +64,19 @@ MOTS_VIDES = frozenset(
         "it", "its", "itself",
         "we", "us", "our", "ours", "ourselves",
         "they", "them", "their", "theirs", "themselves",
-        # Pronoms relatifs et interrogatifs
         "who", "whom", "whose", "which", "what", "where", "when", "why", "how",
         # Auxiliaires et verbes support
         "am", "is", "are", "was", "were", "be", "been", "being",
         "have", "has", "had", "having",
         "do", "does", "did", "doing", "done",
         "will", "would", "shall", "should", "can", "could", "may", "might", "must",
-        # Prepositions et conjonctions neutres
+        # Prépositions et conjonctions neutres
         "of", "in", "on", "at", "by", "for", "with", "about", "against",
         "between", "into", "through", "during", "before", "after", "above",
         "below", "from", "up", "down", "out", "off", "over", "under",
         "again", "further", "once", "and", "or", "as", "if", "because",
         "until", "while", "since", "than", "then", "there", "here", "to",
-        # Divers non porteurs de sentiment
+        # Divers qui ne portent pas de sentiment
         "all", "both", "few", "own", "same",
         "now", "just", "only", "also", "well", "back", "even", "still",
         "get", "got", "go", "going", "gonna",
@@ -89,14 +84,14 @@ MOTS_VIDES = frozenset(
     }
 )
 
-# Mots explicitement PRESERVES malgre leur frequence, car ils portent ou
-# modifient le sentiment. Cette liste sert de documentation et de garde-fou :
-# le test unitaire verifie qu'aucun d'entre eux n'a atterri dans MOTS_VIDES.
+# Les mots que je garde exprès, alors qu'ils sont très fréquents, parce qu'ils
+# portent ou modifient le sentiment. Cette liste sert de documentation et de
+# garde-fou : un test vérifie qu'aucun d'eux ne s'est glissé dans MOTS_VIDES.
 MOTS_A_PRESERVER = frozenset(
     {
-        # Negations : elles inversent la polarite.
-        # Les deux orthographes sont listees car le nettoyage conserve
-        # l'apostrophe, et sur Twitter les deux formes coexistent
+        # Les négations, elles inversent le sens.
+        # Je liste les deux orthographes parce que le nettoyage garde
+        # l'apostrophe et que sur Twitter les deux formes coexistent
         # massivement ("don't" et "dont").
         "not", "no", "never", "nor", "none", "nothing", "nobody", "cannot",
         "cant", "dont", "doesnt", "didnt", "isnt", "arent",
@@ -105,25 +100,28 @@ MOTS_A_PRESERVER = frozenset(
         "can't", "don't", "doesn't", "didn't", "isn't", "aren't",
         "wasn't", "weren't", "won't", "wouldn't", "shouldn't", "couldn't",
         "haven't", "hasn't", "hadn't",
-        # Intensificateurs : ils amplifient la polarite
+        # Les intensificateurs, ils amplifient le sentiment.
         "very", "too", "so", "much", "many", "more", "most", "really",
         "quite", "totally", "absolutely",
-        # Attenuateurs et contrastifs : ils la nuancent ou la retournent
+        # Les mots qui atténuent ou qui opposent.
         "but", "however", "although", "though", "barely", "hardly", "less",
     }
 )
 
 
 # ---------------------------------------------------------------------------
-# 2. EXPRESSIONS REGULIERES
+# 2. LES EXPRESSIONS RÉGULIÈRES
 # ---------------------------------------------------------------------------
-# Les expressions regulieres sont compilees UNE SEULE FOIS au chargement du
-# module, et non a chaque appel. Sur 1,6 million de tweets, la difference se
-# compte en minutes.
+# Une expression régulière est une façon de décrire un motif de texte à
+# chercher. Par exemple "un @ suivi de lettres" pour repérer une mention.
+#
+# Je les compile une seule fois au chargement du fichier, et pas à chaque
+# appel de la fonction. Sur 1,6 million de tweets, ça change le temps de
+# calcul de plusieurs minutes.
 
-# Entites HTML : le jeu de donnees Sentiment140 a ete aspire du web sans etre
-# decode, on y trouve donc "&amp;" a la place de "&", "&quot;" pour un
-# guillemet, etc. On les remet en clair AVANT tout autre traitement.
+# Les entités HTML. Le jeu de données a été aspiré du web sans être décodé,
+# on y trouve donc "&amp;" à la place de "&", "&quot;" pour un guillemet.
+# Je les remets en clair avant tout le reste.
 ENTITES_HTML = {
     "&amp;": " and ",
     "&quot;": " ",
@@ -133,68 +131,68 @@ ENTITES_HTML = {
     "&#39;": "'",
 }
 
-# Adresses web. Elles n'apportent rien au sentiment (un lien n'est ni positif
-# ni negatif) mais polluent enormement le vocabulaire, puisque chaque lien est
-# unique. On les supprime.
+# Les adresses web. Un lien n'est ni positif ni négatif, et comme chaque lien
+# est unique, les garder ferait exploser la taille du vocabulaire avec des
+# milliers de mots vus une seule fois. Je les supprime.
 MOTIF_URL = re.compile(r"https?://\S+|www\.\S+")
 
-# Mentions d'utilisateurs (@AirParadis). Meme raisonnement : chaque pseudo est
-# unique, cela creerait des milliers de mots vus une seule fois.
+# Les mentions d'utilisateur, comme @AirParadis. Même raisonnement : chaque
+# pseudo est unique.
 MOTIF_MENTION = re.compile(r"@\w+")
 
-# Hashtags. Ici on ne supprime que le croisillon et on GARDE le mot :
-# "#terrible" est une information de sentiment tres forte.
+# Les hashtags. Là je ne supprime que le croisillon et je garde le mot, parce
+# que "#terrible" est une information de sentiment très forte.
 MOTIF_HASHTAG = re.compile(r"#(\w+)")
 
-# Lettres repetees trois fois ou plus. "sooooo goooood" est ecrit ainsi pour
-# l'emphase ; on ramene a deux repetitions ("soo goood") pour regrouper toutes
-# les variantes d'un meme mot, tout en conservant la trace de l'emphase.
+# Les lettres répétées trois fois ou plus. Quand quelqu'un écrit "sooooo
+# goooood", c'est pour insister. Je ramène à deux répétitions ("soo goood"),
+# ce qui regroupe toutes les variantes du même mot tout en gardant la trace
+# de l'insistance.
 MOTIF_LETTRES_REPETEES = re.compile(r"(.)\1{2,}")
 
-# Tout ce qui n'est ni une lettre, ni une apostrophe, ni un espace :
-# chiffres, ponctuation, caracteres speciaux, emojis.
+# Tout ce qui n'est ni une lettre, ni une apostrophe, ni un espace : les
+# chiffres, la ponctuation, les caractères spéciaux, les emojis.
 MOTIF_CARACTERES_NON_ALPHA = re.compile(r"[^a-z'\s]")
 
-# Espaces multiples, tabulations, retours a la ligne.
+# Les espaces en trop, les tabulations, les retours à la ligne.
 MOTIF_ESPACES_MULTIPLES = re.compile(r"\s+")
 
 
 # ---------------------------------------------------------------------------
-# 3. FONCTION PRINCIPALE DE NETTOYAGE
+# 3. LA FONCTION DE NETTOYAGE
 # ---------------------------------------------------------------------------
 def nettoyer_tweet(texte: str) -> str:
     """
-    Nettoie le texte brut d'un tweet et renvoie une chaine normalisee.
+    Nettoie le texte brut d'un tweet et renvoie une version normalisée.
 
-    Ce nettoyage est volontairement le meme pour les trois approches
-    (classique, avance sur mesure, BERT) : c'est la condition pour que la
-    comparaison de leurs performances soit honnete. Si chaque approche
-    nettoyait a sa facon, on ne saurait plus si l'ecart de score vient du
-    modele ou du pretraitement.
+    J'applique exactement le même nettoyage aux trois approches (classique,
+    réseau sur mesure, BERT). C'est la condition pour que la comparaison de
+    leurs scores soit honnête : si chaque approche nettoyait à sa façon, je ne
+    saurais plus si l'écart vient du modèle ou du prétraitement.
 
-    Les etapes, dans l'ordre :
-      1. Securiser l'entree (valeur manquante, type inattendu).
+    Les étapes, dans l'ordre :
+      1. Sécuriser l'entrée (valeur manquante, mauvais type).
       2. Passer en minuscules.
-      3. Decoder les entites HTML.
+      3. Décoder les entités HTML.
       4. Supprimer les adresses web.
       5. Supprimer les mentions @utilisateur.
-      6. Retirer le croisillon des hashtags en gardant le mot.
-      7. Reduire les lettres repetees.
-      8. Supprimer chiffres, ponctuation et caracteres speciaux.
+      6. Enlever le croisillon des hashtags en gardant le mot.
+      7. Réduire les lettres répétées.
+      8. Supprimer chiffres, ponctuation et caractères spéciaux.
       9. Normaliser les espaces.
 
-    Parametres
+    Paramètres
     ----------
     texte : str
-        Le texte brut du tweet, tel qu'il sort du fichier CSV ou tel qu'il a
-        ete saisi par l'utilisateur dans l'interface de test.
+        Le texte brut du tweet, soit tel qu'il sort du fichier CSV, soit tel
+        qu'il a été tapé par l'utilisateur dans l'interface de test.
 
     Retourne
     --------
     str
-        Le tweet nettoye, en minuscules, sans ponctuation, mots separes par
-        un espace unique. Peut etre une chaine vide si le tweet ne contenait
-        que des liens ou des mentions.
+        Le tweet nettoyé, en minuscules, sans ponctuation, mots séparés par un
+        seul espace. Peut être une chaîne vide si le tweet ne contenait que des
+        liens ou des mentions.
 
     Exemples
     --------
@@ -207,77 +205,78 @@ def nettoyer_tweet(texte: str) -> str:
     >>> nettoyer_tweet("")
     ''
     """
-    # --- Etape 1 : securiser l'entree -------------------------------------
-    # L'API recoit du JSON : on peut tres bien y trouver None ou un nombre.
-    # Plutot que de laisser une exception remonter jusqu'a l'utilisateur, on
-    # renvoie une chaine vide, que le reste du code sait gerer.
+    # Étape 1, sécuriser l'entrée.
+    # L'API reçoit du JSON envoyé par un client extérieur : on peut très bien
+    # y trouver None ou un nombre. Plutôt que de laisser une erreur remonter
+    # jusqu'à l'utilisateur, je renvoie une chaîne vide, que la suite sait
+    # gérer.
     if not isinstance(texte, str):
         return ""
 
-    # --- Etape 2 : minuscules ---------------------------------------------
-    # "GREAT", "Great" et "great" doivent etre le meme mot pour le modele.
+    # Étape 2, les minuscules.
+    # "GREAT", "Great" et "great" doivent être le même mot pour le modèle.
     texte = texte.lower()
 
-    # --- Etape 3 : entites HTML -------------------------------------------
-    # A faire tot : "&amp;" contient un "&" qui serait sinon supprime a
-    # l'etape 8, laissant trainer un "amp" parasite.
+    # Étape 3, les entités HTML.
+    # À faire tôt : "&amp;" contient un "&" qui serait sinon supprimé à
+    # l'étape 8, en laissant traîner un "amp" parasite.
     for entite, remplacement in ENTITES_HTML.items():
         texte = texte.replace(entite, remplacement)
 
-    # --- Etape 4 : adresses web -------------------------------------------
+    # Étape 4, les adresses web.
     texte = MOTIF_URL.sub(" ", texte)
 
-    # --- Etape 5 : mentions d'utilisateurs --------------------------------
+    # Étape 5, les mentions.
     texte = MOTIF_MENTION.sub(" ", texte)
 
-    # --- Etape 6 : hashtags -----------------------------------------------
-    # r"\1" veut dire "remets le groupe capture", c'est-a-dire le mot qui
-    # suivait le croisillon : "#angry" devient "angry".
+    # Étape 6, les hashtags.
+    # Le r"\1" veut dire "remets ce que tu as capturé entre parenthèses",
+    # c'est-à-dire le mot qui suivait le croisillon.
     texte = MOTIF_HASHTAG.sub(r"\1", texte)
 
-    # --- Etape 7 : lettres repetees ---------------------------------------
-    # r"\1\1" : on garde deux exemplaires de la lettre capturee.
+    # Étape 7, les lettres répétées.
+    # r"\1\1" : je garde deux exemplaires de la lettre capturée.
     texte = MOTIF_LETTRES_REPETEES.sub(r"\1\1", texte)
 
-    # --- Etape 8 : caracteres non alphabetiques ---------------------------
-    # On conserve l'apostrophe pour ne pas casser "don't" en "don" + "t",
-    # ce qui ferait disparaitre la negation.
+    # Étape 8, les caractères qui ne sont pas des lettres.
+    # Je garde l'apostrophe, sinon "don't" devient "don" plus "t" et la
+    # négation disparaît.
     texte = MOTIF_CARACTERES_NON_ALPHA.sub(" ", texte)
 
-    # --- Etape 9 : espaces ------------------------------------------------
-    # .strip() retire les espaces en debut et fin de chaine.
+    # Étape 9, les espaces.
+    # .strip() enlève les espaces au début et à la fin.
     texte = MOTIF_ESPACES_MULTIPLES.sub(" ", texte).strip()
 
     return texte
 
 
 # ---------------------------------------------------------------------------
-# 4. RETRAIT DES MOTS VIDES (optionnel)
+# 4. LE RETRAIT DES MOTS VIDES, EN OPTION
 # ---------------------------------------------------------------------------
 def retirer_mots_vides(texte: str) -> str:
     """
-    Retire les mots vides d'un texte deja nettoye.
+    Retire les mots vides d'un texte déjà nettoyé.
 
-    Cette etape est SEPAREE de `nettoyer_tweet` a dessein, car elle n'est pas
+    J'ai séparé cette étape de nettoyer_tweet exprès, parce qu'elle n'est pas
     souhaitable pour toutes les approches :
 
-      - Modele classique (TF-IDF) : le retrait est generalement benefique.
-        Le modele ne voit que des mots isoles, sans ordre ; les mots vides
-        n'y sont que du bruit qui dilue le vocabulaire.
+      Modèle classique : le retrait est souvent bénéfique. Ce modèle ne voit
+      que des mots isolés, sans leur ordre, donc les mots vides ne sont que
+      du bruit qui dilue le vocabulaire.
 
-      - Modele avance et BERT : le retrait est generalement NUISIBLE. Ces
-        modeles exploitent l'ordre et la structure de la phrase. Les mots
-        vides portent cette structure grammaticale, et les vecteurs de mots
-        pre-entraines ont ete appris sur du texte complet, pas ampute.
+      Modèle avancé et BERT : le retrait est plutôt nuisible. Ces modèles se
+      servent de l'ordre et de la structure de la phrase, et cette structure
+      est justement portée par les mots vides. En plus, les vecteurs de mots
+      qu'ils utilisent ont été appris sur du texte complet, pas amputé.
 
-    Le notebook du modele classique compare les deux variantes et enregistre
-    les deux scores dans MLflow : la decision est prise sur la mesure, pas
-    sur une intuition.
+    Le notebook 02 compare les deux variantes et enregistre les deux scores
+    dans MLflow, pour que la décision se prenne sur une mesure et pas sur une
+    intuition.
 
-    Parametres
+    Paramètres
     ----------
     texte : str
-        Un texte deja passe par `nettoyer_tweet`.
+        Un texte déjà passé par nettoyer_tweet.
 
     Retourne
     --------
@@ -297,11 +296,11 @@ def retirer_mots_vides(texte: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# 5. VERIFICATION RAPIDE
+# 5. VÉRIFICATION RAPIDE
 # ---------------------------------------------------------------------------
-# Ce bloc ne s'execute que si l'on lance directement `python src/preprocessing.py`.
-# Il n'est jamais execute quand le module est importe par un notebook ou par
-# l'API. C'est un moyen commode de verifier le comportement en un coup d'oeil.
+# Ce bloc ne s'exécute que si je lance directement "python src/preprocessing.py".
+# Il ne s'exécute jamais quand le fichier est importé par un notebook ou par
+# l'API. C'est pratique pour vérifier le comportement d'un coup d'oeil.
 if __name__ == "__main__":
     exemples = [
         "@AirParadis my flight is soooo LATE!!! #angry http://t.co/xyz",

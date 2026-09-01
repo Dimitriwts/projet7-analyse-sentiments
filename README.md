@@ -1,120 +1,132 @@
-# Air Paradis — Prédiction de sentiment sur les tweets
+# Air Paradis : prédire le sentiment d'un tweet
 
-Prototype d'un produit d'intelligence artificielle capable de **prédire le
-sentiment associé à un tweet**, afin d'anticiper les bad buzz sur les réseaux
+Prototype d'un produit d'intelligence artificielle qui devine si un tweet
+exprime un sentiment négatif, pour anticiper les bad buzz sur les réseaux
 sociaux.
 
-Réalisé par **MIC (Marketing Intelligence Consulting)** pour la compagnie
-aérienne **Air Paradis**.
+Réalisé par MIC (Marketing Intelligence Consulting) pour la compagnie aérienne
+Air Paradis.
 
 ---
 
-## 1. Objectif du projet
+## 1. L'objectif du projet
 
-Air Paradis souhaite être alertée le plus tôt possible lorsqu'un message
-négatif circule à son sujet sur les réseaux sociaux. Le produit demandé est un
-**prototype fonctionnel** répondant à un besoin simple à énoncer :
+Air Paradis veut être prévenue le plus tôt possible quand un message négatif
+circule à son sujet sur les réseaux sociaux. Ce qu'on me demande est un
+prototype qui répond à une question simple :
 
-> À partir du texte d'un tweet, déterminer s'il exprime un sentiment
-> **négatif** ou **non négatif**.
+> À partir du texte d'un tweet, est-ce qu'il exprime un sentiment négatif ou
+> non ?
 
-Air Paradis ne dispose d'aucune donnée client exploitable pour ce sujet. Le
-prototype s'appuie donc sur un jeu de données open source : **Sentiment140**,
-1,6 million de tweets en anglais, étiquetés positif ou négatif.
+Air Paradis n'a aucune donnée client exploitable sur ce sujet. Je pars donc
+d'un jeu de données public : Sentiment140, 1,6 million de tweets en anglais
+déjà étiquetés positifs ou négatifs.
 
-Le projet poursuit deux objectifs de front :
+Le projet a deux objectifs en parallèle.
 
-1. **Objectif modélisation** — comparer trois approches de complexité
-   croissante et retenir la plus pertinente.
-2. **Objectif MLOps** — démontrer une démarche industrialisée complète :
-   suivi des expérimentations, tests automatisés, déploiement continu et
-   suivi de la performance du modèle en production.
+Côté modélisation, je compare trois approches de complexité croissante et je
+garde la plus pertinente.
+
+Côté MLOps, je montre une démarche industrialisée complète. MLOps est la
+contraction de Machine Learning et Operations. C'est l'ensemble des pratiques
+qui font qu'un modèle ne reste pas coincé dans un notebook, mais qu'il finit
+en production, surveillé, et qu'on puisse le remplacer sans tout casser. En
+pratique ça veut dire : versionner le code, garder la trace de chaque
+expérimentation, tester automatiquement, déployer automatiquement, et
+surveiller ce qui se passe une fois en ligne.
 
 ### Les trois approches comparées
 
-| # | Approche | Principe | Notebook |
-|---|----------|----------|----------|
-| 1 | **Modèle sur mesure simple** | TF-IDF + régression logistique. Le texte est réduit à un sac de mots pondérés, sans notion d'ordre. Sert de référence de base. | `02_modele_classique.ipynb` |
-| 2 | **Modèle sur mesure avancé** | Word embeddings + réseau de neurones récurrent. Le modèle exploite l'ordre des mots. Deux jeux d'embeddings différents sont comparés. | `03_modele_avance.ipynb` |
-| 3 | **Modèle avancé BERT** | Modèle de langue pré-entraîné (DistilBERT), qui comprend le contexte de chaque mot dans la phrase. | `04_modele_bert.ipynb` |
+| Numéro | Approche | Le principe | Le notebook |
+|---|---|---|---|
+| 1 | Modèle sur mesure simple | TF-IDF et régression logistique. Le tweet devient un sac de mots pondérés, sans notion d'ordre. Sert de point de comparaison de base. | `02_modele_classique.ipynb` |
+| 2 | Modèle sur mesure avancé | Word embeddings et réseau de neurones récurrent. Le modèle tient compte de l'ordre des mots. Je compare deux jeux d'embeddings différents. | `03_modele_avance.ipynb` |
+| 3 | Modèle avancé BERT | Un modèle de langue déjà entraîné sur des milliards de mots, qui comprend le contexte de chaque mot dans la phrase. | `04_modele_bert.ipynb` |
 
-C'est le **modèle sur mesure avancé** (approche 2) qui est exposé via l'API
-déployée sur le cloud, conformément au cahier des charges.
+C'est le modèle sur mesure avancé (approche 2) qui est exposé par l'API
+déployée sur le cloud, comme le demande le cahier des charges.
 
 ---
 
-## 2. Découpage des dossiers
+## 2. Le découpage des dossiers
 
 ```
 PROJET7/
 │
-├── README.md                Ce fichier — objectif du projet et découpage
-├── requirements.txt         Packages nécessaires aux notebooks
-├── pytest.ini               Configuration des tests unitaires
-├── .gitignore               Fichiers exclus du versioning
+├── README.md                Ce fichier : l'objectif du projet et le découpage
+├── requirements.txt         La liste des packages Python nécessaires
+├── pytest.ini               Les réglages des tests unitaires
+├── .gitignore               Les fichiers que Git doit ignorer
 │
-├── data/                    DONNÉES (jamais versionnées — trop volumineuses)
-│   ├── raw/                 → déposer ici le CSV Sentiment140
-│   └── processed/           → tweets nettoyés, générés par le notebook 01
+├── data/                    LES DONNÉES (jamais versionnées, trop lourdes)
+│   ├── raw/                 déposer ici le fichier CSV de Sentiment140
+│   └── processed/           les tweets nettoyés, produits par le notebook 01
 │
-├── src/                     CODE SOURCE PARTAGÉ
-│   ├── config.py            Chemins et constantes — source unique de vérité
-│   ├── preprocessing.py     Nettoyage des tweets (partagé entraînement / API)
-│   └── data_loader.py       Chargement, préparation et découpage des données
+├── src/                     LE CODE PARTAGÉ ENTRE TOUS LES NOTEBOOKS
+│   ├── config.py            toutes les constantes au même endroit
+│   ├── preprocessing.py     le nettoyage des tweets, partagé avec l'API
+│   ├── data_loader.py       charger, échantillonner et découper les données
+│   └── evaluation.py        calculer les scores et tracer les graphiques
 │
-├── notebooks/               MODÉLISATION (avec suivi MLflow)
+├── notebooks/               LA MODÉLISATION, avec suivi MLflow
 │   ├── 01_exploration_donnees.ipynb
 │   ├── 02_modele_classique.ipynb
 │   ├── 03_modele_avance.ipynb
 │   ├── 04_modele_bert.ipynb
 │   └── 05_comparaison_et_export.ipynb
 │
-├── api/                     API DE PRÉDICTION (déployée sur Azure)
-│   ├── main.py              Application FastAPI
-│   ├── preprocessing.py     Copie automatique de src/preprocessing.py
-│   ├── requirements.txt     Dépendances légères de l'API uniquement
-│   └── artefacts/           Modèle allégé + vocabulaire, chargés au démarrage
+├── api/                     L'API DE PRÉDICTION, déployée sur Azure
+│   ├── main.py              l'application FastAPI
+│   ├── preprocessing.py     copie automatique de src/preprocessing.py
+│   ├── requirements.txt     les dépendances légères de l'API seulement
+│   └── artefacts/           le modèle allégé et le vocabulaire
 │
-├── tests/                   TESTS UNITAIRES AUTOMATISÉS
+├── tests/                   LES TESTS UNITAIRES AUTOMATISÉS
 │   ├── test_preprocessing.py
 │   └── test_api.py
 │
-├── interface/               INTERFACE DE TEST LOCALE
-│   └── app_streamlit.py     Saisie d'un tweet, appel de l'API, validation
+├── interface/               L'INTERFACE DE TEST, exécutée en local
+│   └── app_streamlit.py     saisir un tweet, voir la prédiction, la valider
 │
-├── .github/workflows/       DÉPLOIEMENT CONTINU
-│   └── azure-deploy.yml     Tests puis déploiement automatique sur Azure
+├── .github/workflows/       LE DÉPLOIEMENT CONTINU
+│   └── azure-deploy.yml     tests puis mise en ligne automatique
 │
-└── docs/                    LIVRABLES DE COMMUNICATION
-    ├── article_blog.md      Article de blog
-    └── presentation/        Support de présentation
+└── docs/                    LES LIVRABLES DE COMMUNICATION
+    ├── article_blog.md
+    └── presentation/
 ```
 
-### Deux dossiers, deux mondes
+### Pourquoi src/ et api/ sont deux mondes séparés
 
-La séparation entre `src/` et `api/` mérite une explication, car elle
-structure tout le projet.
+C'est la décision qui structure tout le projet, donc je l'explique.
 
-`src/` contient le code de **recherche** : il peut dépendre de TensorFlow, de
-pandas, de tout ce qui est nécessaire pour entraîner. Il tourne sur un poste
-de développement.
+Le dossier `src/` contient le code de recherche. Il tourne sur mon poste et il
+peut dépendre de TensorFlow, de pandas, de tout ce dont j'ai besoin pour
+entraîner.
 
-`api/` contient le code de **production** : il tourne sur un serveur Azure
-gratuit limité à **1 Go de mémoire**. Il ne doit embarquer que le strict
-minimum — pas de TensorFlow complet, pas de pandas.
+Le dossier `api/` contient le code de production. Il tourne sur un serveur
+Azure gratuit limité à 1 Go de mémoire. Il ne doit embarquer que le strict
+minimum, donc pas de TensorFlow complet et pas de pandas.
 
-Un seul fichier traverse la frontière : `preprocessing.py`. Le tweet doit
-être nettoyé **exactement de la même façon** à l'entraînement et en
-production, sinon les prédictions se dégradent silencieusement. Ce fichier
-est donc écrit sans aucune dépendance externe, et le pipeline de déploiement
-le recopie automatiquement dans `api/`. Un test unitaire vérifie que les deux
-copies sont identiques.
+Un seul fichier traverse la frontière : `preprocessing.py`. Le tweet doit être
+nettoyé exactement de la même façon à l'entraînement et en production, sinon
+les prédictions se dégradent en silence. C'est pour ça qu'il est écrit sans
+aucune dépendance extérieure, que le pipeline de déploiement le recopie
+automatiquement dans `api/`, et qu'un test vérifie que les deux copies sont
+identiques.
+
+### Est-ce que les notebooks tournent sans le dossier src/ ?
+
+Non, et c'est voulu. Sans `src/`, le code de nettoyage serait recopié dans
+chacun des cinq notebooks, plus une sixième fois dans l'API, et ces copies
+finiraient par diverger. C'est exactement le problème que ce projet doit
+apprendre à éviter.
 
 ---
 
 ## 3. Installation
 
-### Prérequis
+### Ce qu'il faut avoir
 
 - Python 3.13
 - Git
@@ -122,110 +134,116 @@ copies sont identiques.
 ### Mise en place
 
 ```bash
-# 1. Créer l'environnement isolé
 python -m venv .venv
+```
 
-# 2. L'activer  (Windows PowerShell)
+```bash
 .venv\Scripts\Activate.ps1
+```
 
-# 3. Installer les dépendances
+```bash
 pip install -r requirements.txt
 ```
 
-### Récupérer le jeu de données
+La première commande crée un environnement virtuel, c'est-à-dire un dossier
+`.venv/` qui contient sa propre installation de Python et ses propres
+packages, séparés de ceux du reste de la machine. Ça évite qu'un package
+installé pour un autre projet vienne casser celui-ci, et ça garantit que le
+`requirements.txt` livré ne contient que ce dont ce projet a besoin.
 
-Le fichier fait 230 Mo décompressé : il n'est pas versionné dans le dépôt.
+### Récupérer les données
 
-1. Télécharger le jeu de données **Sentiment140**.
+Le fichier fait 230 Mo une fois décompressé, il n'est donc pas dans le dépôt
+Git.
+
+1. Télécharger le jeu de données Sentiment140.
 2. Le décompresser.
-3. Déposer le fichier CSV dans **`data/raw/`**.
+3. Déposer le fichier CSV dans `data/raw/`.
 
-Le fichier attendu s'appelle `training.1600000.processed.noemoticon.csv`.
-Un autre nom fonctionne également : le chargeur prend le premier `.csv`
-trouvé dans le dossier.
+Le fichier attendu s'appelle `training.1600000.processed.noemoticon.csv`. Un
+autre nom marche aussi, le chargeur prend le premier `.csv` du dossier.
 
 ---
 
-## 4. Exécution du projet
+## 4. Faire tourner le projet
 
-### Étape 1 — Lancer le serveur MLflow
+### Étape 1 : lancer MLflow
 
-MLflow enregistre chaque expérimentation (paramètres, métriques, modèle) et
-centralise le stockage des modèles. Il doit tourner **avant** les notebooks,
-dans un terminal dédié qu'on laisse ouvert.
+MLflow enregistre chaque expérimentation (les réglages, les scores, la durée)
+et centralise le stockage des modèles. Il doit tourner avant les notebooks,
+dans un terminal à part qu'on laisse ouvert.
 
 ```bash
-mlflow server --backend-store-uri sqlite:///mlflow.db --host 127.0.0.1 --port 5000
+.venv\Scripts\python.exe -m mlflow server --backend-store-uri sqlite:///mlflow.db --host 127.0.0.1 --port 5000
 ```
 
-Interface web : <http://127.0.0.1:5000>
+L'interface web est ensuite sur http://127.0.0.1:5000
 
-> Le support de stockage est une base SQLite et non de simples fichiers, car
-> le **Model Registry** — la centralisation des modèles — exige une base de
-> données.
+Le stockage est une base SQLite et pas de simples fichiers, parce que le Model
+Registry (le catalogue des modèles, qui leur donne un numéro de version) a
+besoin d'une vraie base de données pour fonctionner.
 
-### Étape 2 — Exécuter les notebooks dans l'ordre
+### Étape 2 : exécuter les notebooks dans l'ordre
 
 ```bash
-jupyter notebook
+.venv\Scripts\jupyter.exe notebook
 ```
 
 | Ordre | Notebook | Ce qu'il produit |
-|-------|----------|------------------|
-| 1 | `01_exploration_donnees.ipynb` | Analyse du jeu de données, nettoyage, fichier `data/processed/tweets_prepares.parquet` |
-| 2 | `02_modele_classique.ipynb` | Modèle de référence + runs MLflow |
-| 3 | `03_modele_avance.ipynb` | Modèles à embeddings + runs MLflow |
-| 4 | `04_modele_bert.ipynb` | Modèle BERT + runs MLflow |
-| 5 | `05_comparaison_et_export.ipynb` | Comparaison des trois approches, export des artefacts vers `api/artefacts/` |
+|---|---|---|
+| 1 | `01_exploration_donnees.ipynb` | L'analyse du jeu de données et le fichier de travail `data/processed/tweets_prepares.parquet` |
+| 2 | `02_modele_classique.ipynb` | Le modèle de référence et ses runs MLflow |
+| 3 | `03_modele_avance.ipynb` | Les modèles à embeddings et leurs runs MLflow |
+| 4 | `04_modele_bert.ipynb` | Le modèle BERT et ses runs MLflow |
+| 5 | `05_comparaison_et_export.ipynb` | La comparaison des trois approches et l'export des artefacts vers `api/artefacts/` |
 
-Le notebook 01 doit impérativement être exécuté en premier : les trois
-notebooks de modélisation partent du fichier qu'il produit, ce qui garantit
-qu'ils travaillent tous sur exactement les mêmes tweets.
+Le notebook 01 doit être lancé en premier. Les trois notebooks de modélisation
+partent du fichier qu'il produit, c'est ce qui garantit qu'ils travaillent sur
+exactement les mêmes tweets.
 
-### Étape 3 — Lancer l'API en local
+### Étape 3 : lancer l'API en local
 
 ```bash
-uvicorn api.main:app --reload
+.venv\Scripts\python.exe -m uvicorn api.main:app --reload
 ```
 
-Documentation interactive : <http://127.0.0.1:8000/docs>
+La documentation interactive est sur http://127.0.0.1:8000/docs
 
-### Étape 4 — Lancer l'interface de test
+### Étape 4 : lancer l'interface de test
 
 ```bash
-streamlit run interface/app_streamlit.py
+.venv\Scripts\streamlit.exe run interface/app_streamlit.py
 ```
 
-### Étape 5 — Lancer les tests unitaires
+### Étape 5 : lancer les tests
 
 ```bash
-pytest
+.venv\Scripts\python.exe -m pytest
 ```
 
 ---
 
-## 5. Démarche MLOps mise en œuvre
+## 5. La démarche MLOps mise en oeuvre
 
-| Brique | Outil | Rôle |
-|--------|-------|------|
-| Versioning du code | Git + GitHub | Historique complet, traçabilité des modifications |
-| Suivi des expérimentations | MLflow Tracking | Paramètres, métriques et durée de chaque entraînement |
-| Stockage centralisé des modèles | MLflow Model Registry | Un modèle versionné et promu en production |
-| Tests automatisés | pytest | Exécutés avant chaque déploiement |
-| Déploiement continu | GitHub Actions | Tests puis mise en ligne automatique sur Azure |
-| Suivi en production | Azure Application Insights | Traces des prédictions mal jugées + alerte automatique |
-
----
-
-## 6. Résultats
-
-*(Section complétée à l'issue de la modélisation.)*
+| La brique | L'outil | À quoi elle sert |
+|---|---|---|
+| Versionner le code | Git et GitHub | Garder l'historique complet et savoir qui a changé quoi |
+| Suivre les expérimentations | MLflow Tracking | Enregistrer les réglages, les scores et la durée de chaque entraînement |
+| Centraliser les modèles | MLflow Model Registry | Un modèle versionné, avec celui qui part en production clairement désigné |
+| Tester automatiquement | pytest | Les tests tournent avant chaque déploiement |
+| Déployer automatiquement | GitHub Actions | Tests puis mise en ligne sur Azure, sans intervention manuelle |
+| Surveiller en production | Azure Application Insights | Remonter les tweets mal prédits et déclencher une alerte |
 
 ---
 
-## 7. Packages utilisés
+## 6. Les résultats
 
-La liste complète et les versions exactes figurent dans
-[`requirements.txt`](requirements.txt) pour l'environnement de modélisation,
-et dans [`api/requirements.txt`](api/requirements.txt) pour l'API en
-production.
+Section complétée à la fin de la modélisation.
+
+---
+
+## 7. Les packages utilisés
+
+La liste complète avec les versions exactes est dans
+[`requirements.txt`](requirements.txt) pour l'environnement de modélisation, et
+dans [`api/requirements.txt`](api/requirements.txt) pour l'API en production.
