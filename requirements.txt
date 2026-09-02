@@ -82,12 +82,38 @@ uvicorn==0.52.4
 # --- L'interface de test de l'API --------------------------------------------
 streamlit==1.62.0
 requests==2.34.2
+# python-dotenv lit le fichier .env, ou sont rangés la chaîne de connexion
+# Application Insights et l'adresse de l'API. Ce fichier n'est pas versionné :
+# le code va dans le dépôt, les secrets restent sur la machine.
+#
+# Il était déjà installé, mais seulement comme dépendance indirecte d'un autre
+# package. Une installation propre à partir de ce fichier aurait pu ne pas
+# l'avoir, ou l'avoir dans une version différente. Un package qu'on importe
+# doit toujours figurer explicitement ici.
+python-dotenv==1.2.3
 
 
 # --- Le suivi de la performance en production --------------------------------
 # Envoie les traces vers Azure Application Insights, qui déclenche l'alerte
 # quand trop de prédictions sont invalidées par l'utilisateur.
-azure-monitor-opentelemetry==1.8.2
+azure-monitor-opentelemetry==1.8.9
+
+# Ces deux lignes ont l'air redondantes, puisque le package ci-dessus installe
+# déjà OpenTelemetry. Elles ne le sont pas, et voici pourquoi.
+#
+# azure-monitor-opentelemetry déclare avoir besoin de "opentelemetry-sdk~=1.36",
+# ce qui accepte n'importe quelle version 1.x à partir de 1.36. Or la classe
+# LogData, dont il se sert, a été supprimée du SDK en version 1.44. Pip
+# installait donc une combinaison qu'il croyait valable et qui plantait à
+# l'import, avec un message parfaitement incompréhensible :
+#
+#     ImportError: cannot import name 'LogData' from 'opentelemetry.sdk._logs'
+#
+# Je fige donc explicitement la dernière version d'OpenTelemetry qui fonctionne.
+# C'est le genre de piège qu'on ne voit qu'à l'exécution, et c'est exactement
+# la raison d'être d'un fichier de dépendances aux versions figées.
+opentelemetry-sdk==1.43.0
+opentelemetry-api==1.43.0
 
 
 # --- Les tests unitaires -----------------------------------------------------
