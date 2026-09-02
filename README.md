@@ -233,7 +233,47 @@ d'exécution pèse quelques mégaoctets au lieu de 600.
 
 ---
 
-## 5. La démarche MLOps mise en oeuvre
+## 5. Le déploiement sur Azure
+
+L'API tourne sur un Azure App Service en plan **F1 (gratuit)**, sous Linux, en
+Python 3.13, dans la région France Central.
+
+### La configuration de l'application
+
+Ces quatre réglages sont faits dans le portail Azure. Ils ne sont pas dans le
+code, donc je les note ici : sans eux, le déploiement échoue ou l'application
+démarre sans jamais répondre.
+
+| Où | Réglage | Valeur | Pourquoi |
+|---|---|---|---|
+| Configuration → Paramètres de la pile | Commande de démarrage | `python -m uvicorn main:app --host 0.0.0.0 --port 8000` | Sans elle, Azure cherche un `app.py`, ne le trouve pas et sert sa page par défaut. On écrit `main:app` et non `api.main:app` car seul le contenu du dossier `api/` est déployé |
+| Configuration → Paramètres généraux | Authentification de base SCM | Activé | Le déploiement par profil de publication en a besoin. Microsoft la désactive par défaut sur les nouvelles applications |
+| Variables d'environnement | `SCM_DO_BUILD_DURING_DEPLOYMENT` | `true` | Sans lui, Azure copie les fichiers mais n'exécute jamais `pip install`. L'API démarrerait sans ses dépendances |
+| Secrets GitHub | `AZURE_WEBAPP_PUBLISH_PROFILE` | contenu du profil de publication | Les identifiants de déploiement. Ils ne doivent jamais apparaître dans le code |
+
+### Les limites du plan gratuit
+
+Le plan F1 offre 1 Go de mémoire et 60 minutes de processeur par jour, ce qui
+suffit largement pour un prototype. Il a en revanche deux contraintes qu'il
+faut connaître.
+
+L'option « Toujours allumé » n'est pas disponible : l'application s'endort
+après vingt minutes sans requête et met une trentaine de secondes à se
+réveiller. C'est pour ça que le pipeline interroge la route de santé dix fois
+de suite, espacées de quinze secondes, plutôt qu'une seule fois.
+
+Et la mémoire disponible est la raison d'être de tout le travail d'allègement
+du modèle décrit dans le notebook 05 : TensorFlow ne tiendrait pas dans 1 Go.
+
+### Reproduire le déploiement
+
+Une fois ces réglages en place, il n'y a plus rien à faire manuellement. Tout
+envoi de code sur la branche principale déclenche le pipeline, qui lance les
+tests puis déploie si et seulement s'ils passent.
+
+---
+
+## 6. La démarche MLOps mise en oeuvre
 
 | La brique | L'outil | À quoi elle sert |
 |---|---|---|
@@ -246,13 +286,13 @@ d'exécution pèse quelques mégaoctets au lieu de 600.
 
 ---
 
-## 6. Les résultats
+## 7. Les résultats
 
 Section complétée à la fin de la modélisation.
 
 ---
 
-## 7. Les packages utilisés
+## 8. Les packages utilisés
 
 La liste complète avec les versions exactes est dans
 [`requirements.txt`](requirements.txt) pour l'environnement de modélisation, et
