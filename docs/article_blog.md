@@ -15,7 +15,9 @@ Nous avons construit ce prototype, comparé trois approches d'intelligence
 artificielle, et mis la meilleure en production sur le cloud. Voici ce que nous
 avons trouvé, y compris ce à quoi nous ne nous attendions pas.
 
-> 📸 *Capture 1 : l'interface de test, avec un tweet analysé*
+![L'interface de test : un tweet saisi, la prediction affichee avec sa probabilite, et les deux boutons de validation](captures/1-interface-streamlit.png)
+
+*L'interface de test interroge l'API deployee sur Azure et demande a l'utilisateur de valider la prediction.*
 
 ## Le point de départ : 1,6 million de tweets
 
@@ -171,7 +173,9 @@ connaissance de la langue qui compense le manque d'exemples. C'est précisément
 ce qui rend BERT intéressant quand on ne dispose que de quelques milliers
 d'exemples étiquetés, situation la plus fréquente en entreprise.
 
-> 📸 *Capture 2 : le graphique de la courbe d'apprentissage*
+![Courbe d'apprentissage du modele classique, avec les points du modele avance et de BERT places au volume de donnees qu'ils ont vu](captures/2-courbe-apprentissage.png)
+
+*Un point au-dessus de la courbe signifie que le modele fait mieux qu'une regression logistique disposant des memes donnees.*
 
 ## Ce que les scores ne disent pas
 
@@ -208,7 +212,9 @@ catalogue versionné, avec la description de ce qu'ils attendent en entrée. À
 tout moment on peut remonter du modèle en production aux paramètres exacts de
 son entraînement.
 
-> 📸 *Capture 3 : l'interface MLflow, comparaison des runs*
+![L'interface MLflow listant les entrainements avec leurs reglages et leurs scores](captures/3-mlflow-comparaison-runs.png)
+
+*Chaque entrainement est enregistre avec ses reglages, ses scores et sa duree.*
 
 **Versionner le code.** Tout est dans un dépôt Git, avec des messages de commit
 qui expliquent les décisions et pas seulement les changements.
@@ -224,7 +230,9 @@ test le rend impossible.
 déploiement **si et seulement s'ils passent tous**. Personne ne peut mettre en
 ligne une version cassée, même par inadvertance.
 
-> 📸 *Capture 4 : le pipeline GitHub Actions entièrement vert*
+![Le pipeline GitHub Actions : les tests unitaires puis le deploiement, tous deux au vert](captures/4-pipeline-github-actions.png)
+
+*Le deploiement n'a lieu que si les 48 tests passent.*
 
 ## Ce qui casse entre le notebook et la production
 
@@ -268,7 +276,9 @@ moins.
 Une règle d'alerte prévient par courriel dès que trois prédictions sont
 contestées en cinq minutes.
 
-> 📸 *Capture 5 : le courriel d'alerte reçu*
+![Le courriel d'alerte Azure indiquant que trois predictions ont ete contestees](captures/5-mail-alerte.png)
+
+*L'alerte se declenche des que trois predictions sont contestees en cinq minutes.*
 
 Nous avons d'ailleurs découvert un défaut en conditions réelles : la première
 version envoyait **cinq courriels pour un seul incident**, parce que la règle
