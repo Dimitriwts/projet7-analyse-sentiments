@@ -1,0 +1,1564 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Air Paradis, analyse de sentiment, soutenance</title>
+<style>
+/* ===================================================================
+   Support de soutenance, projet 7.
+   Navigation : fleches droite/gauche ou espace. F11 pour le plein ecran.
+   Ctrl+P donne un PDF avec une diapositive par page.
+   =================================================================== */
+
+:root {
+  --nuit:        #10243B;
+  --nuit-clair:  #1D3E60;
+  --fond:        #F5F8FA;
+  --carte:       #EAF0F5;
+  --texte:       #15222E;
+  --doux:        #5B6D7D;
+  --negatif:     #C93F3F;
+  --positif:     #2A8F62;
+  --accent:      #D98C20;
+  --accent-clair:#F4E2C4;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: #0A1622;
+  font-family: Calibri, "Segoe UI", Arial, sans-serif;
+  color: var(--texte);
+  overflow: hidden;
+}
+
+/* --- Le cadre de la diapositive ------------------------------------ */
+#scene {
+  position: fixed; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.diapo {
+  position: absolute;
+  width: 1280px; height: 720px;
+  background: var(--fond);
+  padding: 54px 64px;
+  display: none;
+  flex-direction: column;
+  transform-origin: center center;
+}
+.diapo.active { display: flex; }
+
+/* --- Diapositives sombres ------------------------------------------ */
+.diapo.sombre { background: var(--nuit); color: #EAF2F8; }
+.diapo.sombre h1, .diapo.sombre h2 { color: #FFFFFF; }
+.diapo.sombre .doux { color: #9BB3C7; }
+
+/* --- Titres --------------------------------------------------------- */
+h1 { font-size: 52px; font-weight: 700; line-height: 1.15; }
+h2 { font-size: 33px; font-weight: 700; line-height: 1.2; margin-bottom: 22px; }
+h3 { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+
+.surtitre {
+  font-size: 14px; font-weight: 700; letter-spacing: 1.6px;
+  text-transform: uppercase; color: var(--doux); margin-bottom: 12px;
+}
+.diapo.sombre .surtitre { color: #7FA3C0; }
+
+p { font-size: 17px; line-height: 1.55; margin-bottom: 12px; }
+.doux { color: var(--doux); }
+.petit { font-size: 14px; }
+strong { font-weight: 700; }
+
+/* --- Mises en page --------------------------------------------------- */
+.corps { flex: 1; display: flex; flex-direction: column; justify-content: center; min-height: 0; }
+.deux-col { display: grid; grid-template-columns: 1fr 1fr; gap: 34px; align-items: start; }
+.deux-col.large-droite { grid-template-columns: 42% 1fr; }
+.deux-col.large-gauche { grid-template-columns: 1fr 42%; }
+.trois-col { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
+.grille-2x2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+/* --- Cartes ---------------------------------------------------------- */
+.carte {
+  background: var(--carte);
+  border-radius: 10px;
+  padding: 20px 22px;
+}
+.diapo.sombre .carte { background: rgba(255,255,255,0.07); }
+
+.carte h3 { color: var(--nuit); }
+.diapo.sombre .carte h3 { color: #FFFFFF; }
+.carte p { font-size: 15px; margin-bottom: 6px; }
+.carte p:last-child { margin-bottom: 0; }
+
+/* --- Pastille numerotee (le motif du support) ------------------------ */
+.pastille {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px; border-radius: 50%;
+  background: var(--nuit); color: #FFF;
+  font-weight: 700; font-size: 16px;
+  margin-bottom: 10px; flex: none;
+}
+.pastille.vert { background: var(--positif); }
+.pastille.rouge { background: var(--negatif); }
+.ligne-pastille { display: flex; gap: 16px; align-items: flex-start; margin-bottom: 16px; }
+.ligne-pastille .pastille { margin-bottom: 0; }
+
+/* --- Grands chiffres -------------------------------------------------- */
+.chiffre { font-size: 54px; font-weight: 700; line-height: 1; color: var(--nuit); }
+.diapo.sombre .chiffre { color: #FFFFFF; }
+.chiffre.vert { color: var(--positif); }
+.chiffre.rouge { color: var(--negatif); }
+.chiffre-libelle { font-size: 14px; color: var(--doux); margin-top: 6px; }
+.diapo.sombre .chiffre-libelle { color: #9BB3C7; }
+
+/* --- Tableaux --------------------------------------------------------- */
+table { width: 100%; border-collapse: collapse; font-size: 15px; }
+th {
+  text-align: left; font-weight: 700; color: var(--doux);
+  font-size: 13px; text-transform: uppercase; letter-spacing: 0.6px;
+  padding: 8px 12px; border-bottom: 2px solid #C7D5E0;
+}
+td { padding: 9px 12px; border-bottom: 1px solid #DCE5EC; }
+tr.mise-en-avant td { background: var(--accent-clair); font-weight: 700; }
+.diapo.sombre th { color: #7FA3C0; border-bottom-color: #2C4E70; }
+.diapo.sombre td { border-bottom-color: #23415F; }
+td.num { font-variant-numeric: tabular-nums; }
+
+/* --- Images ------------------------------------------------------------ */
+.capture {
+  width: 100%; border-radius: 8px;
+  border: 1px solid #C7D5E0;
+  cursor: zoom-in;
+  display: block;
+}
+.capture.contenue { max-height: 470px; object-fit: contain; object-position: top; background: #FFF; }
+.legende { font-size: 13px; color: var(--doux); margin-top: 8px; font-style: italic; }
+
+/* --- Citation ---------------------------------------------------------- */
+.citation {
+  font-size: 20px; font-style: italic; line-height: 1.5;
+  padding-left: 20px; border-left: 3px solid var(--nuit);
+  color: var(--nuit);
+}
+.diapo.sombre .citation { border-left-color: #7FA3C0; color: #EAF2F8; }
+
+/* --- Pied de diapositive ------------------------------------------------ */
+.pied {
+  position: absolute; bottom: 22px; left: 64px; right: 64px;
+  display: flex; justify-content: space-between;
+  font-size: 12px; color: var(--doux);
+}
+.diapo.sombre .pied { color: #6F8EA8; }
+
+/* --- Zoom sur les captures ---------------------------------------------- */
+#zoom {
+  position: fixed; inset: 0; background: rgba(6,14,22,0.94);
+  display: none; align-items: center; justify-content: center;
+  z-index: 100; cursor: zoom-out; padding: 30px;
+}
+#zoom.ouvert { display: flex; }
+#zoom img { max-width: 100%; max-height: 100%; border-radius: 6px; }
+
+/* --- Impression : une diapositive par page ------------------------------- */
+@media print {
+  @page { size: 1280px 720px; margin: 0; }
+  body { background: #FFF; overflow: visible; }
+  #scene { position: static; display: block; }
+  .diapo {
+    display: flex !important;
+    position: relative;
+    transform: none !important;
+    page-break-after: always;
+    break-after: page;
+  }
+  #aide { display: none !important; }
+}
+
+#aide {
+  position: fixed; bottom: 10px; right: 14px;
+  font-size: 11px; color: #4A6076; z-index: 50;
+}
+</style>
+</head>
+<body>
+
+<div id="scene">
+
+<!-- ============================ 1. TITRE ============================ -->
+<section class="diapo sombre active" style="justify-content:center">
+  <div class="corps">
+    <p class="surtitre">Projet 7 &nbsp;·&nbsp; Ingénieur IA</p>
+    <h1>Réalisez une analyse de sentiments<br>grâce au Deep Learning</h1>
+    <p style="font-size:21px; margin-top:26px; max-width:820px" class="doux">
+      Concevoir, comparer et mettre en production un modèle capable de prédire
+      le sentiment d'un tweet, pour permettre à la compagnie aérienne
+      Air Paradis d'anticiper les bad buzz.
+    </p>
+    <p style="font-size:18px; margin-top:40px">
+      <strong>Dimitri Wyts</strong><br>
+      <span class="doux">MIC &nbsp;·&nbsp; Marketing Intelligence Consulting</span>
+    </p>
+  </div>
+</section>
+
+<!-- ============================ 2. SOMMAIRE ============================ -->
+<section class="diapo">
+  <h2>Sommaire</h2>
+  <div class="corps">
+    <div class="deux-col">
+      <div>
+        <div class="ligne-pastille">
+          <span class="pastille">I</span>
+          <div>
+            <h3>Contexte et préparation</h3>
+            <p class="doux petit">Le besoin d'Air Paradis, le jeu de données, le nettoyage
+            et ce que l'exploration a révélé.</p>
+          </div>
+        </div>
+        <div class="ligne-pastille">
+          <span class="pastille">II</span>
+          <div>
+            <h3>Les trois approches</h3>
+            <p class="doux petit">Modèle classique, modèle sur mesure avancé, BERT.
+            Ce qu'elles font, pourquoi ces choix, et leurs résultats.</p>
+          </div>
+        </div>
+        <div class="ligne-pastille">
+          <span class="pastille">III</span>
+          <div>
+            <h3>La comparaison</h3>
+            <p class="doux petit">Pourquoi la lecture naïve des scores est trompeuse,
+            et ce que donne une comparaison honnête.</p>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="ligne-pastille">
+          <span class="pastille">IV</span>
+          <div>
+            <h3>La démarche MLOps</h3>
+            <p class="doux petit">Suivi des expérimentations, centralisation des modèles,
+            versioning, tests automatisés, déploiement continu.</p>
+          </div>
+        </div>
+        <div class="ligne-pastille">
+          <span class="pastille">V</span>
+          <div>
+            <h3>La mise en production</h3>
+            <p class="doux petit">L'API sur le cloud, ce qui casse entre le notebook et
+            la production, le suivi de la performance et les alertes.</p>
+          </div>
+        </div>
+        <div class="ligne-pastille">
+          <span class="pastille">VI</span>
+          <div>
+            <h3>Bilan et perspectives</h3>
+            <p class="doux petit">La réponse au client et la démarche d'amélioration
+            du modèle dans le temps.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="pied"><span>Sommaire</span><span class="numero"></span></div>
+</section>
+
+<!-- ============================ 3. CONTEXTE ============================ -->
+<section class="diapo">
+  <h2>Contexte et objectifs du projet</h2>
+  <div class="corps">
+    <p class="citation" style="margin-bottom:24px">
+      « Air Paradis veut un prototype d'un produit IA permettant de prédire
+      le sentiment associé à un tweet. »
+    </p>
+    <div class="trois-col">
+      <div class="carte">
+        <h3>Le besoin métier</h3>
+        <p>Air Paradis n'a pas toujours bonne presse sur les réseaux sociaux.</p>
+        <p>Un message négatif repéré dans l'heure se traite. Le même repéré trois
+        jours plus tard est devenu une crise.</p>
+      </div>
+      <div class="carte">
+        <h3>La contrainte</h3>
+        <p>Aucune donnée client exploitable chez Air Paradis.</p>
+        <p>Il faut donc partir de <strong>données open source</strong>, et accepter
+        les limites de ce qu'elles contiennent.</p>
+      </div>
+      <div class="carte">
+        <h3>La demande élargie</h3>
+        <p>Marc, mon manager, veut « faire d'une pierre deux coups » : un prototype
+        pour le client, et une <strong>démarche MLOps</strong> exemplaire diffusable
+        aux autres équipes.</p>
+      </div>
+    </div>
+    <div class="deux-col" style="margin-top:26px">
+      <div>
+        <h3>Ce qui est demandé</h3>
+        <p class="petit">Trois approches comparées, de la régression logistique aux
+        modèles de langue pré-entraînés. Le modèle avancé exposé par une API déployée
+        sur le cloud, appelée depuis une interface locale.</p>
+      </div>
+      <div>
+        <h3>Pourquoi c'est important pour Air Paradis</h3>
+        <p class="petit">Le coût des deux erreurs n'est pas symétrique. Rater un tweet
+        négatif, c'est une crise qui démarre sans qu'on la voie. Signaler à tort un
+        tweet positif, c'est trente secondes perdues pour un chargé de communication.</p>
+      </div>
+    </div>
+  </div>
+  <div class="pied"><span>I. Contexte et préparation</span><span class="numero"></span></div>
+</section>
+
+<!-- ============================ 4. DEBUT DU PROJET ============================ -->
+<section class="diapo">
+  <h2>Début du projet : environnement et contraintes</h2>
+  <div class="corps">
+    <div class="grille-2x2">
+      <div class="carte">
+        <h3>L'environnement de travail</h3>
+        <p>Python 3.13 dans un <strong>environnement virtuel isolé</strong>, pour que la
+        liste des packages livrée ne contienne que ce dont le projet a besoin.</p>
+        <p>VS Code pour les notebooks et le code, Git dès le premier jour.</p>
+      </div>
+      <div class="carte">
+        <h3>La contrainte matérielle</h3>
+        <p>Un ordinateur portable, <strong>16 Go de mémoire, aucune carte graphique
+        dédiée</strong>.</p>
+        <p>Cette contrainte a dicté presque toutes les décisions techniques du projet,
+        et je la documente à chaque fois.</p>
+      </div>
+      <div class="carte">
+        <h3>La méthode adoptée</h3>
+        <p><strong>Mesurer avant de décider.</strong> Chaque choix d'architecture ou de
+        réglage a été précédé d'un chronométrage sur un échantillon réduit.</p>
+        <p>Cela m'a évité de lancer des entraînements de plusieurs heures pour rien,
+        et plusieurs fois de me tromper.</p>
+      </div>
+      <div class="carte">
+        <h3>Le découpage du dépôt</h3>
+        <p>Deux mondes séparés : <code>src/</code> pour la recherche, qui peut dépendre de
+        TensorFlow, et <code>api/</code> pour la production, qui doit tenir dans 1 Go.</p>
+        <p>Un seul fichier traverse la frontière, et c'est le sujet de la diapositive 7.</p>
+      </div>
+    </div>
+  </div>
+  <div class="pied"><span>I. Contexte et préparation</span><span class="numero"></span></div>
+</section>
+
+<!-- ============================ 5. JEU DE DONNEES ============================ -->
+<section class="diapo">
+  <h2>Le jeu de données : Sentiment140</h2>
+  <div class="corps">
+    <div class="deux-col large-droite">
+      <div>
+        <div style="display:flex; gap:40px; margin-bottom:24px">
+          <div>
+            <div class="chiffre">1,6 M</div>
+            <div class="chiffre-libelle">tweets en anglais</div>
+          </div>
+          <div>
+            <div class="chiffre">50 / 50</div>
+            <div class="chiffre-libelle">positifs et négatifs</div>
+          </div>
+        </div>
+        <h3>Ce qu'il contient</h3>
+        <p class="petit">Des tweets collectés en 2009, avec leur texte, leur auteur, leur
+        date, et une étiquette binaire.</p>
+        <p class="petit">Je n'utilise que <strong>le texte et l'étiquette</strong> : l'API
+        ne recevra qu'un texte, entraîner le modèle sur des informations qu'il n'aura pas
+        en production n'aurait aucun sens.</p>
+      </div>
+      <div>
+        <div class="carte" style="background:var(--accent-clair)">
+          <h3>La limite à connaître, et à assumer</h3>
+          <p>L'étiquetage a été fait <strong>automatiquement</strong> : un tweet contenant
+          une émoticône souriante a été classé positif, un tweet avec une émoticône triste,
+          négatif. Les émoticônes ont ensuite été retirées du texte pour que le modèle ne
+          puisse pas tricher.</p>
+          <p>C'est ingénieux, mais imparfait : <strong>un tweet ironique accompagné d'un
+          smiley se retrouve étiqueté positif à tort</strong>.</p>
+          <p>Conséquence directe : il existe un plafond de performance qu'aucun modèle ne
+          pourra franchir, situé autour de 85 % selon la littérature. Il faut le dire au
+          client plutôt que de lui promettre 99 %.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="pied"><span>I. Contexte et préparation</span><span class="numero"></span></div>
+</section>
+
+<!-- ============================ 6. LIBRAIRIES ============================ -->
+<section class="diapo">
+  <h2>Les bibliothèques Python utilisées, et pourquoi</h2>
+  <div class="corps">
+    <div class="deux-col">
+      <div>
+        <div class="ligne-pastille">
+          <span class="pastille">1</span>
+          <div>
+            <h3>Manipulation des données</h3>
+            <p class="petit"><strong>pandas</strong> et <strong>numpy</strong> pour charger,
+            filtrer et transformer les 1,6 million de tweets.
+            <strong>pyarrow</strong> pour le format Parquet, cinq fois plus compact qu'un
+            CSV et bien plus rapide à relire.</p>
+          </div>
+        </div>
+        <div class="ligne-pastille">
+          <span class="pastille">2</span>
+          <div>
+            <h3>Modèle classique</h3>
+            <p class="petit"><strong>scikit-learn</strong> fournit TF-IDF, la régression
+            logistique, le découpage entraînement/test et toutes les métriques. C'est la
+            bibliothèque de référence de l'apprentissage automatique classique.</p>
+          </div>
+        </div>
+        <div class="ligne-pastille">
+          <span class="pastille">3</span>
+          <div>
+            <h3>Modèle avancé</h3>
+            <p class="petit"><strong>TensorFlow</strong> et sa surcouche Keras pour le réseau
+            de neurones. <strong>gensim</strong> pour entraîner les vecteurs de mots et
+            télécharger ceux de GloVe.</p>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="ligne-pastille">
+          <span class="pastille">4</span>
+          <div>
+            <h3>BERT</h3>
+            <p class="petit"><strong>PyTorch</strong> en version processeur uniquement, et
+            <strong>transformers</strong> qui donne accès aux modèles pré-entraînés. La
+            version GPU de PyTorch pèse 2,5 Go pour rien sur cette machine.</p>
+          </div>
+        </div>
+        <div class="ligne-pastille">
+          <span class="pastille">5</span>
+          <div>
+            <h3>MLOps</h3>
+            <p class="petit"><strong>MLflow</strong> pour le suivi des expérimentations et le
+            catalogue de modèles. <strong>pytest</strong> pour les tests automatisés.
+            <strong>FastAPI</strong> et <strong>uvicorn</strong> pour l'API.</p>
+          </div>
+        </div>
+        <div class="ligne-pastille">
+          <span class="pastille">6</span>
+          <div>
+            <h3>Production et suivi</h3>
+            <p class="petit"><strong>ai-edge-litert</strong> exécute le modèle allégé sur le
+            serveur, à la place de TensorFlow. <strong>streamlit</strong> pour l'interface de
+            test, <strong>azure-monitor-opentelemetry</strong> pour les traces.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="pied"><span>I. Contexte et préparation</span><span class="numero"></span></div>
+</section>
+
+<!-- ============================ 7. NETTOYAGE ============================ -->
+<section class="diapo">
+  <h2>Le nettoyage des tweets : la décision qui compte</h2>
+  <div class="corps">
+    <div class="deux-col">
+      <div>
+        <h3>Ce que fait le nettoyage</h3>
+        <p class="petit">Suppression des liens et des mentions, qui n'apportent rien au
+        sentiment mais gonflent le vocabulaire puisque chacun est unique. Décodage des
+        caractères du web, réduction des lettres répétées, retrait de la ponctuation.</p>
+
+        <h3 style="margin-top:20px">Le piège des « mots vides »</h3>
+        <p class="petit">Les outils proposent une liste de mots trop courants à supprimer.
+        Le problème est que <strong>ces listes toutes faites contiennent les négations</strong>.</p>
+      </div>
+      <div>
+        <div class="carte" style="background:#F7DEDE">
+          <h3 style="color:var(--negatif)">Ce qui se passe si on les applique</h3>
+          <p style="font-family:Consolas,monospace; font-size:15px; margin:10px 0">
+            « this flight was <strong>not</strong> good »<br>
+            <span style="color:var(--negatif)">↓ retrait des mots vides standard</span><br>
+            « flight good »
+          </p>
+          <p><strong>Le sens est exactement inversé.</strong> Le modèle apprend le contraire
+          de ce qu'il faut.</p>
+        </div>
+        <div class="carte" style="background:#DDEFE5; margin-top:16px">
+          <h3 style="color:var(--positif)">Ce que j'ai fait</h3>
+          <p>Une liste expurgée de toute négation, de tout intensificateur et de tout
+          contrastif. Et <strong>un test automatique qui échoue</strong> si quelqu'un y
+          réintroduit un jour un de ces mots.</p>
+        </div>
+      </div>
+    </div>
+    <p class="petit doux" style="margin-top:22px">
+      Ce module de nettoyage est écrit <strong>sans aucune dépendance externe</strong>, uniquement
+      avec la bibliothèque standard de Python. C'est ce qui permettra de le faire tourner tel quel
+      sur le serveur de production, qui ne dispose que d'un gigaoctet de mémoire.
+    </p>
+  </div>
+  <div class="pied"><span>I. Contexte et préparation</span><span class="numero"></span></div>
+</section>
+
+<!-- ============================ 8. EXPLORATION ============================ -->
+<section class="diapo">
+  <h2>Ce que l'exploration a révélé</h2>
+  <div class="corps">
+    <div class="trois-col" style="margin-bottom:26px">
+      <div class="carte">
+        <div class="chiffre">32</div>
+        <div class="chiffre-libelle">mots de longueur maximale retenue</div>
+        <p class="petit" style="margin-top:12px">Mesuré sur le texte nettoyé, pas sur le texte
+        brut. Ce seuil couvre <strong>99,98 %</strong> des tweets et économise 20 % de temps
+        de calcul par rapport à 40.</p>
+      </div>
+      <div class="carte">
+        <div class="chiffre rouge">4,9 %</div>
+        <div class="chiffre-libelle">de doublons après nettoyage</div>
+        <p class="petit" style="margin-top:12px">Messages banals, et surtout du spam de robots
+        republié <strong>jusqu'à 1 484 fois</strong>. Le nettoyage les rend identiques en
+        retirant les pseudos qui les différenciaient.</p>
+      </div>
+      <div class="carte">
+        <div class="chiffre">13,5x</div>
+        <div class="chiffre-libelle">écart de fréquence du mot « sad »</div>
+        <p class="petit" style="margin-top:12px">Entre tweets négatifs et positifs. Le
+        vocabulaire des deux classes est nettement différencié : <strong>le signal existe</strong>
+        dans les mots pris isolément.</p>
+      </div>
+    </div>
+    <div class="carte" style="background:var(--accent-clair)">
+      <h3>Pourquoi retirer les doublons change tout</h3>
+      <p>Le découpage entre données d'entraînement et données de test se fait au hasard. Si un
+      même texte apparaît 500 fois, il se retrouve <strong>mécaniquement des deux côtés</strong>.
+      Le modèle l'a donc déjà vu pendant l'entraînement : au moment du test, il le reconnaît au
+      lieu de le comprendre.</p>
+      <p>On appelle cela une <strong>fuite de données</strong>. Le score mesuré devient optimiste,
+      et le modèle paraît meilleur qu'il ne le sera en production, où il ne rencontrera que des
+      tweets inédits. Sans cette correction, tous les chiffres de cette présentation seraient
+      flatteurs et faux.</p>
+    </div>
+  </div>
+  <div class="pied"><span>I. Contexte et préparation</span><span class="numero"></span></div>
+</section>
+
+<!-- ============================ 9. SECTION APPROCHES ============================ -->
+<section class="diapo sombre" style="justify-content:center">
+  <div class="corps">
+    <p class="surtitre">Partie II</p>
+    <h1>Les trois approches</h1>
+    <p style="font-size:19px; margin-top:22px; max-width:800px" class="doux">
+      De la régression logistique au modèle de langue pré-entraîné. Pour chacune :
+      ce que c'est, à quoi ça sert, pourquoi ce choix, et ce que ça donne.
+    </p>
+    <div class="trois-col" style="margin-top:44px">
+      <div class="carte">
+        <span class="pastille">1</span>
+        <h3>Modèle sur mesure simple</h3>
+        <p class="doux">TF-IDF et régression logistique. Le tweet devient un sac de mots
+        pondérés, sans notion d'ordre.</p>
+      </div>
+      <div class="carte">
+        <span class="pastille">2</span>
+        <h3>Modèle sur mesure avancé</h3>
+        <p class="doux">Word embeddings et réseau de neurones récurrent. Le modèle lit
+        enfin la phrase dans l'ordre.</p>
+      </div>
+      <div class="carte">
+        <span class="pastille">3</span>
+        <h3>Modèle avancé BERT</h3>
+        <p class="doux">Un modèle de langue pré-entraîné sur des milliards de mots, qui
+        comprend le contexte de chaque mot.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ 10. APPROCHE 1 : PRINCIPE ============================ -->
+<section class="diapo">
+  <p class="surtitre">Approche 1 · Modèle sur mesure simple</p>
+  <h2>TF-IDF : qu'est-ce que c'est, à quoi ça sert ?</h2>
+  <div class="corps">
+    <div class="deux-col">
+      <div>
+        <h3>Le problème à résoudre</h3>
+        <p class="petit">Un modèle ne sait manipuler que des nombres. Il faut donc transformer
+        chaque tweet en une liste de nombres.</p>
+
+        <h3 style="margin-top:18px">Le principe de TF-IDF</h3>
+        <p class="petit"><em>Term Frequency, Inverse Document Frequency.</em> Un mot est
+        important s'il est <strong>fréquent dans ce tweet-ci, mais rare dans l'ensemble des
+        tweets</strong>.</p>
+        <p class="petit">Le mot <em>the</em> apparaît partout, il ne distingue rien, son poids
+        s'effondre. Le mot <em>terrible</em> est rare, donc très informatif, son poids monte.</p>
+
+        <h3 style="margin-top:18px">Pourquoi pas un simple comptage ?</h3>
+        <p class="petit">Parce qu'un comptage brut donnerait le plus de poids aux mots les plus
+        fréquents, c'est-à-dire à ceux qui n'apprennent rien. TF-IDF corrige exactement ce défaut,
+        et c'est pourquoi c'est la méthode de référence depuis des décennies.</p>
+      </div>
+      <div>
+        <div class="carte">
+          <h3>La régression logistique</h3>
+          <p>Elle apprend <strong>un poids par mot</strong>, puis les combine pour trancher.</p>
+          <p>Son grand avantage : elle est <strong>directement interprétable</strong>. On peut
+          ouvrir le modèle et lire mot par mot ce qu'il a retenu, ce qui est impossible avec un
+          réseau de neurones. Pour une audience non technique, c'est un argument précieux.</p>
+        </div>
+        <div class="carte" style="background:#F7DEDE; margin-top:16px">
+          <h3 style="color:var(--negatif)">Sa limite, connue d'avance</h3>
+          <p>Cette approche traite le tweet comme un <strong>sac de mots</strong> : elle compte
+          les mots présents mais ignore complètement leur ordre.</p>
+          <p style="font-family:Consolas,monospace; font-size:15px">
+            « not good » &nbsp;=&nbsp; « good not »
+          </p>
+          <p>C'est précisément la faiblesse que les approches 2 et 3 viendront corriger.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="pied"><span>II. Les trois approches</span><span class="numero"></span></div>
+</section>
+
+<!-- ============================ 11. APPROCHE 1 : RESULTATS ============================ -->
+<section class="diapo">
+  <p class="surtitre">Approche 1 · Modèle sur mesure simple</p>
+  <h2>Quatre configurations testées, un résultat contre-intuitif</h2>
+  <div class="corps">
+    <table style="margin-bottom:22px">
+      <tr>
+        <th>Configuration</th><th>n-grammes</th><th>Mots vides</th>
+        <th>Exactitude</th><th>AUC ROC</th><th>Durée</th>
+      </tr>
+      <tr><td>Référence, réponse au hasard</td><td></td><td></td>
+          <td class="num">0,4989</td><td class="num">0,4989</td><td class="num"></td></tr>
+      <tr><td>Mots seuls</td><td>1</td><td>conservés</td>
+          <td class="num">0,7980</td><td class="num">0,8766</td><td class="num">18 s</td></tr>
+      <tr><td>Mots seuls, sans mots vides</td><td>1</td><td>retirés</td>
+          <td class="num">0,7894</td><td class="num">0,8679</td><td class="num">11 s</td></tr>
+      <tr class="mise-en-avant"><td>Avec paires de mots</td><td>1 et 2</td><td>conservés</td>
+          <td class="num">0,8218</td><td class="num">0,9006</td><td class="num">54 s</td></tr>
+      <tr><td>Avec paires, sans mots vides</td><td>1 et 2</td><td>retirés</td>
+          <td class="num">0,8076</td><td class="num">0,8865</td><td class="num">41 s</td></tr>
+    </table>
+    <div class="deux-col">
+      <div class="carte" style="background:var(--accent-clair)">
+        <h3>Le résultat qui surprend</h3>
+        <p><strong>Retirer les mots vides fait perdre 1,4 point</strong> quand on utilise les
+        paires de mots. C'est l'inverse de ce qu'enseignent la plupart des tutoriels.</p>
+        <p>Rétrospectivement c'est logique : les paires <strong>ont besoin</strong> de ces mots
+        pour exister. Supprimer <em>not</em> avant de former « not good » détruit précisément
+        l'information qu'on cherchait à capturer.</p>
+      </div>
+      <div>
+        <h3>Ce que j'en retiens</h3>
+        <p class="petit">Le plan d'expérimentation complet, quatre configurations pour deux
+        facteurs, coûte deux minutes de calcul et évite de décider à l'intuition.</p>
+        <p class="petit">Les quatre essais sont enregistrés dans MLflow avec leurs réglages et
+        leurs scores. <strong>La décision se prend sur la mesure</strong>, et elle reste
+        vérifiable des mois plus tard.</p>
+        <p class="petit doux">Modèle retenu : paires de mots, mots vides conservés, entraîné sur
+        les 1 214 000 tweets d'entraînement.</p>
+      </div>
+    </div>
+  </div>
+  <div class="pied"><span>II. Les trois approches</span><span class="numero"></span></div>
+</section>
+
+<!-- ============================ 12. APPROCHE 2 : EMBEDDINGS ============================ -->
+<section class="diapo">
+  <p class="surtitre">Approche 2 · Modèle sur mesure avancé</p>
+  <h2>Les word embeddings : qu'est-ce que c'est ?</h2>
+  <div class="corps">
+    <div class="deux-col">
+      <div>
+        <h3>Le problème avec les numéros</h3>
+        <p class="petit">Après découpage, le mot <em>terrible</em> devient le numéro 4271 et
+        <em>awful</em> le numéro 5893. Ces numéros traduisent la fréquence, pas le sens. Rien ne
+        dit au modèle que ces deux mots veulent dire à peu près la même chose.</p>
+
+        <h3 style="margin-top:18px">Ce qu'apporte un embedding</h3>
+        <p class="petit">Chaque mot est remplacé par une <strong>liste de 200 nombres</strong>,
+        apprise de telle façon que deux mots employés dans des contextes similaires reçoivent
+        des listes similaires.</p>
+        <p class="petit">Le modèle peut alors <strong>généraliser</strong> : s'il a beaucoup vu
+        <em>awful</em>, il saura traiter <em>terrible</em> même s'il l'a peu rencontré.</p>
+      </div>
+      <div>
+        <div class="carte">
+          <h3>Le principe qui rend ça possible</h3>
+          <p class="citation" style="font-size:17px; margin:10px 0">
+            « On connaît un mot à la compagnie qu'il fréquente. »
+          </p>
+          <p class="doux petit">John Firth, linguiste, 1957</p>
+          <p style="margin-top:12px">Si <em>terrible</em> et <em>awful</em> apparaissent tous
+          les deux souvent après « this was » et avant « experience », alors ils ont
+          probablement un sens proche. Aucune connaissance du dictionnaire n'est nécessaire,
+          seulement des statistiques d'usage.</p>
+        </div>
+        <div class="carte" style="margin-top:16px">
+          <h3>Le réseau de neurones récurrent</h3>
+          <p>Il lit le tweet <strong>mot après mot, dans l'ordre</strong>, en gardant une mémoire
+          de ce qu'il a déjà lu. C'est ce qui lui permet de comprendre qu'un <em>not</em> placé au
+          début modifie un <em>good</em> qui arrive trois mots plus loin.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="pied"><span>II. Les trois approches</span><span class="numero"></span></div>
+</section>
+
+<!-- ============================ 13. WORD2VEC VS GLOVE ============================ -->
+<section class="diapo">
+  <p class="surtitre">Approche 2 · Modèle sur mesure avancé</p>
+  <h2>Deux jeux d'embeddings comparés, comme demandé</h2>
+  <div class="corps">
+    <div class="deux-col" style="margin-bottom:22px">
+      <div class="carte">
+        <h3>Word2Vec, entraîné sur nos tweets</h3>
+        <p><strong>240 000 tweets</strong>, les nôtres. Les vecteurs collent exactement à notre
+        domaine, le langage des tweets de 2009.</p>
+        <p class="doux">Inconvénient : c'est peu pour apprendre le sens de 20 000 mots.</p>
+      </div>
+      <div class="carte">
+        <h3>GloVe Twitter, pré-entraîné</h3>
+        <p><strong>2 milliards de tweets</strong>, publié par l'université Stanford. Une
+        connaissance de la langue incomparablement plus riche.</p>
+        <p class="doux">Inconvénient : il ne connaît pas les particularités de notre corpus.</p>
+      </div>
+    </div>
+    <h3>Ce qu'ils considèrent comme les mots les plus proches de <em>delayed</em></h3>
+    <table style="margin-top:10px">
+      <tr><th style="width:22%">Source</th><th>Les six mots les plus proches</th><th style="width:16%">Pertinents</th></tr>
+      <tr>
+        <td><strong>Word2Vec</strong><br><span class="doux petit">240 000 tweets</span></td>
+        <td style="font-family:Consolas,monospace; font-size:14px">yesterdays, boarding, closing,
+          <strong>postponed</strong>, council, rapid</td>
+        <td><span class="chiffre rouge" style="font-size:26px">1 / 6</span></td>
+      </tr>
+      <tr class="mise-en-avant">
+        <td><strong>GloVe</strong><br><span class="petit">2 milliards de tweets</span></td>
+        <td style="font-family:Consolas,monospace; font-size:14px">delay, postponed, delays,
+          cancelled, canceled, scheduled</td>
+        <td><span class="chiffre vert" style="font-size:26px">6 / 6</span></td>
+      </tr>
+    </table>
+    <p class="petit doux" style="margin-top:18px">
+      GloVe l'emporte de <strong>1,26 point d'exactitude</strong>, et l'on peut voir pourquoi
+      plutôt que de se contenter du score. Détail savoureux : les 183 mots de notre vocabulaire
+      absents de GloVe sont des noms d'applications Twitter de 2009 disparues depuis,
+      <em>twitterberry</em>, <em>ubertwitter</em>, <em>twitterfon</em>. Notre corpus a quinze ans.
+    </p>
+  </div>
+  <div class="pied"><span>II. Les trois approches</span><span class="numero"></span></div>
+</section>
+
+<!-- ============================ 14. GRU VS LSTM ============================ -->
+<section class="diapo">
+  <p class="surtitre">Approche 2 · Modèle sur mesure avancé</p>
+  <h2>Choisir l'architecture sur une mesure, pas sur une habitude</h2>
+  <div class="corps">
+    <div class="deux-col large-droite">
+      <div>
+        <h3>La question</h3>
+        <p class="petit">Deux types de réseaux récurrents s'imposent en pratique. Le
+        <strong>LSTM</strong> possède trois portes qui décident à chaque mot ce qu'il faut garder
+        en mémoire, oublier, et sortir. Le <strong>GRU</strong> fait la même chose avec deux
+        portes : il est plus léger.</p>
+        <p class="petit">La littérature dit que les deux se valent souvent. Plutôt que de choisir
+        par habitude, j'ai mesuré sur une époque, avec exactement les mêmes données.</p>
+
+        <h3 style="margin-top:18px">Bidirectionnel, pourquoi ?</h3>
+        <p class="petit">On lit le tweet deux fois, du début à la fin puis de la fin au début.
+        Le sens d'un mot dépend autant de ce qui le suit que de ce qui le précède.</p>
+      </div>
+      <div>
+        <table>
+          <tr><th>Architecture</th><th>Temps par époque</th><th>Score de validation</th></tr>
+          <tr><td>LSTM bidirectionnel 64</td><td class="num">74,9 s</td><td class="num">0,7982</td></tr>
+          <tr class="mise-en-avant"><td>GRU bidirectionnel 64</td><td class="num">56,3 s</td><td class="num">0,7989</td></tr>
+        </table>
+        <div class="carte" style="background:#DDEFE5; margin-top:18px">
+          <h3 style="color:var(--positif)">La décision</h3>
+          <p>Le GRU est <strong>25 % plus rapide pour un score identique</strong>. Aucune raison
+          de prendre le LSTM.</p>
+          <p>La même méthode a servi pour la taille des lots : 512 s'est révélé à la fois plus
+          rapide et plus performant que 256.</p>
+        </div>
+        <p class="petit doux" style="margin-top:14px">Ces mesures prennent quelques minutes et
+        font gagner des heures sur l'ensemble du projet.</p>
+      </div>
+    </div>
+  </div>
+  <div class="pied"><span>II. Les trois approches</span><span class="numero"></span></div>
+</section>
+
+<!-- ============================ 15. APPROCHE 2 : RESULTATS ============================ -->
+<section class="diapo">
+  <p class="surtitre">Approche 2 · Modèle sur mesure avancé</p>
+  <h2>Quatre configurations, suivies dans MLflow</h2>
+  <div class="corps">
+    <div class="deux-col large-gauche">
+      <div>
+        <img class="capture contenue" src="../captures/3-mlflow-comparaison-runs.png"
+             alt="Interface MLflow montrant les quatre configurations du modèle avancé avec leurs scores et leurs durées">
+        <p class="legende">Les quatre entraînements enregistrés dans MLflow, avec leurs scores
+        et leur durée. Cliquez sur l'image pour l'agrandir.</p>
+      </div>
+      <div>
+        <h3>Ce que chaque configuration teste</h3>
+        <p class="petit"><strong>Sans embeddings pré-entraînés</strong> : que vaut le réseau sans
+        aide extérieure ? C'est la référence.</p>
+        <p class="petit"><strong>Word2Vec figé</strong> : un corpus petit mais parfaitement adapté.</p>
+        <p class="petit"><strong>GloVe figé</strong> : un corpus 8 000 fois plus gros mais générique.</p>
+        <p class="petit"><strong>GloVe affiné</strong> : et si on laisse le réseau adapter GloVe ?</p>
+
+        <div class="carte" style="background:var(--accent-clair); margin-top:16px">
+          <h3>Deux enseignements</h3>
+          <p>Les embeddings pré-entraînés apportent <strong>+1,5 point</strong> par rapport à un
+          apprentissage depuis zéro.</p>
+          <p><strong>Figer vaut mieux qu'affiner</strong> : 0,8131 contre 0,8093. Avec seulement
+          240 000 tweets, laisser bouger 4 millions de paramètres fait sur-apprendre. C'est à la
+          fois moins cher et meilleur.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="pied"><span>II. Les trois approches</span><span class="numero"></span></div>
+</section>
+
+<!-- ============================ 16. BERT : PRINCIPE ============================ -->
+<section class="diapo">
+  <p class="surtitre">Approche 3 · Modèle avancé BERT</p>
+  <h2>BERT : qu'est-ce que c'est, et qu'est-ce que ça change ?</h2>
+  <div class="corps">
+    <div class="deux-col">
+      <div>
+        <h3>La limite des embeddings classiques</h3>
+        <p class="petit">Un mot a <strong>un seul vecteur</strong>, quel que soit son contexte.
+        Dans « the room is light » et « this bag is light », le mot <em>light</em> a exactement
+        la même représentation. Le modèle doit deviner lequel des deux sens s'applique.</p>
+
+        <h3 style="margin-top:18px">Ce que fait BERT</h3>
+        <p class="petit">Il produit un vecteur <strong>différent pour chaque occurrence</strong>,
+        calculé en fonction de tous les autres mots de la phrase. C'est une représentation
+        contextuelle.</p>
+        <p class="petit">Le mécanisme s'appelle <strong>l'attention</strong> : pour chaque mot,
+        le modèle calcule à quel point chacun des autres lui est utile. Dans « the flight was not
+        good », le mot <em>good</em> regarde directement <em>not</em>, sans avoir à faire
+        circuler l'information de proche en proche.</p>
+      </div>
+      <div>
+        <div class="carte">
+          <h3>Le transfert d'apprentissage</h3>
+          <p>BERT a été pré-entraîné par Google sur des milliards de mots, à un jeu simple : on
+          lui masque des mots au hasard et on lui demande de les deviner. Pour y arriver, il a
+          bien fallu qu'il apprenne le fonctionnement de l'anglais.</p>
+          <p>On récupère ce modèle déjà entraîné et on l'adapte à notre tâche : <strong>au lieu
+          de partir de zéro, on part de quelqu'un qui sait déjà lire</strong>.</p>
+        </div>
+        <div class="carte" style="margin-top:16px">
+          <h3>Pourquoi DistilBERT et pas BERT ?</h3>
+          <p>DistilBERT est une version allégée : <strong>40 % plus petite, 60 % plus rapide</strong>,
+          et elle conserve environ 97 % des performances.</p>
+          <p>Sans carte graphique, c'était le seul choix raisonnable. Il compte tout de même
+          <strong>66 millions de paramètres</strong>.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="pied"><span>II. Les trois approches</span><span class="numero"></span></div>
+</section>
+
+<!-- ============================ 17. BERT : COUT ============================ -->
+<section class="diapo">
+  <p class="surtitre">Approche 3 · Modèle avancé BERT</p>
+  <h2>Le coût, mesuré avant d'écrire une ligne de code</h2>
+  <div class="corps">
+    <p class="petit" style="margin-bottom:18px">Marc demandait « si nous devons investir dans ce
+    type de modèle ». La réponse n'est donc pas seulement un score : <strong>c'est un score
+    rapporté à son coût</strong>. J'ai mesuré le débit de DistilBERT sur ce processeur avant de
+    concevoir le notebook.</p>
+    <table style="margin-bottom:20px">
+      <tr><th>Stratégie</th><th>Débit</th><th>10 000 tweets</th><th>50 000 tweets</th></tr>
+      <tr><td><strong>BERT figé</strong>, calculs « aller » seulement, lots de 32</td>
+          <td class="num">32,7 tweets/s</td><td class="num">5 min</td><td class="num">25 min</td></tr>
+      <tr><td>BERT figé, lots de 64</td>
+          <td class="num">27,3 tweets/s</td><td class="num">6 min</td><td class="num">30 min</td></tr>
+      <tr><td><strong>Affinage</strong>, « aller » et « retour », lots de 32</td>
+          <td class="num">7,2 tweets/s</td><td class="num">23 min <span class="doux">par époque</span></td>
+          <td class="num">115 min <span class="doux">par époque</span></td></tr>
+      <tr><td>Affinage, lots de 16</td>
+          <td class="num">6,6 tweets/s</td><td class="num">25 min <span class="doux">par époque</span></td>
+          <td class="num">126 min <span class="doux">par époque</span></td></tr>
+    </table>
+    <div class="trois-col">
+      <div class="carte">
+        <h3>L'affinage coûte 4,5 fois plus</h3>
+        <p class="petit">Ce qui correspond à la théorie : la rétropropagation coûte environ deux
+        fois l'aller, plus la mise à jour des poids.</p>
+      </div>
+      <div class="carte">
+        <h3>Des lots plus gros n'aident pas</h3>
+        <p class="petit">Contrairement au réseau récurrent, BERT sature déjà le processeur avec
+        des lots de 32. C'est le calcul qui limite, pas la mémoire.</p>
+      </div>
+      <div class="carte" style="background:var(--accent-clair)">
+        <h3>La décision</h3>
+        <p class="petit"><strong>10 000 tweets et non 50 000.</strong> Affiner sur 50 000 aurait
+        demandé près de 4 heures par passage. À garder en tête pour la comparaison.</p>
+      </div>
+    </div>
+  </div>
+  <div class="pied"><span>II. Les trois approches</span><span class="numero"></span></div>
+</section>
+
+<!-- ============================ 18. BERT : RESULTATS ============================ -->
+<section class="diapo">
+  <p class="surtitre">Approche 3 · Modèle avancé BERT</p>
+  <h2>BERT figé contre BERT affiné : le résultat le plus instructif</h2>
+  <div class="corps">
+    <div class="deux-col" style="margin-bottom:24px">
+      <div class="carte" style="background:#F7DEDE">
+        <h3 style="color:var(--negatif)">Stratégie A · BERT figé en extracteur</h3>
+        <div style="display:flex; gap:34px; margin:14px 0">
+          <div><div class="chiffre rouge">0,7690</div><div class="chiffre-libelle">exactitude</div></div>
+          <div><div class="chiffre" style="font-size:38px">6 min</div><div class="chiffre-libelle">de calcul</div></div>
+        </div>
+        <p><strong>Le plus mauvais score de tout le projet.</strong> Un modèle de 66 millions de
+        paramètres se fait battre par une régression logistique.</p>
+      </div>
+      <div class="carte" style="background:#DDEFE5">
+        <h3 style="color:var(--positif)">Stratégie B · BERT affiné, 2 époques</h3>
+        <div style="display:flex; gap:34px; margin:14px 0">
+          <div><div class="chiffre vert">0,7990</div><div class="chiffre-libelle">exactitude</div></div>
+          <div><div class="chiffre" style="font-size:38px">44 min</div><div class="chiffre-libelle">de calcul</div></div>
+        </div>
+        <p><strong>+3 points</strong> pour un coût de calcul <strong>7 fois supérieur</strong>.
+        L'affinage n'est pas une option, c'est une nécessité.</p>
+      </div>
+    </div>
+    <div class="carte" style="background:var(--accent-clair)">
+      <h3>Pourquoi BERT figé est-il si mauvais ? Ce n'est pas une anomalie.</h3>
+      <p>BERT a été pré-entraîné à <strong>deviner des mots masqués</strong>, pas à résumer des
+      phrases. Le vecteur qu'on récupère pour représenter le tweet entier n'a jamais été entraîné
+      à porter un sens global : il n'a été entraîné à rien du tout tant qu'on ne l'affine pas.</p>
+      <p>C'est un résultat documenté dans la littérature, et c'est ce qui a motivé la création de
+      modèles spécialisés comme Sentence-BERT. <strong>Sans affinage, BERT est un moteur puissant
+      mais débrayé.</strong></p>
+    </div>
+  </div>
+  <div class="pied"><span>II. Les trois approches</span><span class="numero"></span></div>
+</section>
+
+<!-- ============================ 19. SECTION COMPARAISON ============================ -->
+<section class="diapo sombre" style="justify-content:center">
+  <div class="corps">
+    <p class="surtitre">Partie III</p>
+    <h1>La comparaison</h1>
+    <p style="font-size:19px; margin-top:22px; max-width:820px" class="doux">
+      Les trois approches sont mesurées. Mais les comparer directement serait
+      une erreur, et le résultat en serait faux.
+    </p>
+  </div>
+</section>
+
+<!-- ============================ 20. LE PIEGE ============================ -->
+<section class="diapo">
+  <h2>Le piège de la comparaison naïve</h2>
+  <div class="corps">
+    <div class="deux-col">
+      <div>
+        <h3>Le classement brut</h3>
+        <table style="margin-top:10px">
+          <tr><th>Approche</th><th>Exactitude</th><th>Tweets vus</th></tr>
+          <tr><td>Classique</td><td class="num">82,2 %</td><td class="num">1 214 000</td></tr>
+          <tr><td>Avancé</td><td class="num">81,3 %</td><td class="num">240 000</td></tr>
+          <tr><td>BERT</td><td class="num">79,9 %</td><td class="num">8 000</td></tr>
+        </table>
+        <p class="petit" style="margin-top:18px">Le classement est <strong>exactement inverse de
+        la sophistication</strong>. On pourrait en conclure que l'IA moderne ne sert à rien, et
+        c'est d'ailleurs ce qu'on lit parfois.</p>
+      </div>
+      <div>
+        <div class="carte" style="background:#F7DEDE">
+          <h3 style="color:var(--negatif)">Deux biais rendent ce tableau faux</h3>
+          <p><strong>1. La quantité de données.</strong> Regardez la dernière colonne : il y a un
+          <strong>facteur 150</strong> entre le premier et le dernier. Je ne comparais pas trois
+          modèles, je comparais trois quantités de données.</p>
+          <p><strong>2. Les jeux de test.</strong> Chaque notebook avait tiré son propre
+          échantillon, donc son propre jeu de test. Pire : un tweet du test de BERT pouvait très
+          bien avoir servi à entraîner le modèle avancé.</p>
+        </div>
+        <div class="carte" style="background:#DDEFE5; margin-top:16px">
+          <h3 style="color:var(--positif)">Comment j'ai corrigé les deux</h3>
+          <p>Un <strong>jeu de test commun de 4 000 tweets</strong> qu'aucun des trois modèles
+          n'avait jamais vus à l'entraînement. C'est possible parce que la déduplication rend
+          chaque texte unique et donc utilisable comme identifiant.</p>
+          <p>Puis la <strong>courbe d'apprentissage</strong> du modèle classique, sur laquelle je
+          place les deux autres.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="pied"><span>III. La comparaison</span><span class="numero"></span></div>
+</section>
+
+<!-- ============================ 21. LA COURBE ============================ -->
+<section class="diapo">
+  <h2>La comparaison à données égales</h2>
+  <div class="corps">
+    <img class="capture contenue" style="max-height:330px" src="../captures/2-courbe-apprentissage.png"
+         alt="Courbe d'apprentissage du modèle classique avec les points du modèle avancé et de BERT">
+    <div class="deux-col" style="margin-top:18px">
+      <div>
+        <h3>Comment lire ce graphique</h3>
+        <p class="petit">La courbe bleue montre ce qu'obtient une régression logistique selon la
+        quantité de données. C'est la référence. Les deux autres modèles sont placés au nombre de
+        tweets qu'ils ont <strong>réellement vus</strong>.</p>
+        <p class="petit"><strong>Au-dessus de la courbe</strong> : le modèle fait mieux qu'une
+        méthode simple disposant des mêmes données, sa complexité apporte quelque chose. En
+        dessous : l'inverse.</p>
+      </div>
+      <div>
+        <table>
+          <tr><th>Modèle</th><th>Tweets</th><th>Lui</th><th>Le classique</th><th>Écart</th></tr>
+          <tr class="mise-en-avant"><td>Avancé</td><td class="num">240 000</td>
+            <td class="num">81,0 %</td><td class="num">80,4 %</td><td class="num">+0,6 pt</td></tr>
+          <tr class="mise-en-avant"><td>BERT</td><td class="num">8 000</td>
+            <td class="num">78,7 %</td><td class="num">75,1 %</td><td class="num">+3,6 pt</td></tr>
+        </table>
+        <p class="petit" style="margin-top:14px"><strong>Les deux modèles avancés gagnent.</strong>
+        Le classement initial était entièrement un artefact de la quantité de données. Et l'écart
+        grandit quand les données se raréfient : c'est la signature du transfert d'apprentissage.</p>
+      </div>
+    </div>
+  </div>
+  <div class="pied"><span>III. La comparaison</span><span class="numero"></span></div>
+</section>
+
+<!-- ============================ 22. LA NEGATION ============================ -->
+<section class="diapo">
+  <h2>Ce que les scores ne disent pas : la négation</h2>
+  <div class="corps">
+    <p class="petit" style="margin-bottom:16px">Un pourcentage global cache les cas particuliers.
+    Or pour Air Paradis, un cas compte plus que les autres. Voici des paires de phrases identiques
+    à un mot près. La valeur est la probabilité que le tweet soit positif : <strong>plus elle est
+    basse sur la ligne négative, mieux c'est</strong>.</p>
+    <table style="margin-bottom:20px">
+      <tr><th style="width:44%">Phrase</th><th>Modèle avancé</th><th>BERT</th><th style="width:28%">Lecture</th></tr>
+      <tr><td>this flight was good</td><td class="num">0,941</td><td class="num">0,972</td><td rowspan="2" class="petit">Les deux effondrent le score. Réussi.</td></tr>
+      <tr><td>this flight was <strong>not</strong> good</td>
+          <td class="num" style="color:var(--positif); font-weight:700">0,032</td>
+          <td class="num" style="color:var(--positif); font-weight:700">0,027</td></tr>
+      <tr><td>the crew was helpful</td><td class="num">0,949</td><td class="num">0,974</td><td rowspan="2" class="petit">BERT réussit, le modèle avancé échoue.</td></tr>
+      <tr><td>the crew was <strong>never</strong> helpful</td>
+          <td class="num" style="color:var(--negatif); font-weight:700">0,624</td>
+          <td class="num" style="color:var(--positif); font-weight:700">0,052</td></tr>
+      <tr><td>i would recommend it</td><td class="num">0,952</td><td class="num">0,969</td><td rowspan="2" class="petit">Le modèle avancé réussit, BERT échoue.</td></tr>
+      <tr><td>i would <strong>not</strong> recommend it</td>
+          <td class="num" style="color:var(--positif); font-weight:700">0,209</td>
+          <td class="num" style="color:var(--negatif); font-weight:700">0,776</td></tr>
+    </table>
+    <div class="deux-col">
+      <div class="carte" style="background:#DDEFE5">
+        <h3 style="color:var(--positif)">Ce qui justifie toute l'approche</h3>
+        <p>Les deux modèles gèrent la négation, <strong>ce dont le modèle classique était
+        structurellement incapable</strong> puisqu'il ne voit pas l'ordre des mots.</p>
+      </div>
+      <div class="carte" style="background:var(--accent-clair)">
+        <h3>Ce qu'aucun score ne montre</h3>
+        <p>Ils n'ont pas les mêmes angles morts : <strong>chacun réussit là où l'autre échoue</strong>.
+        Un écart d'un demi-point d'exactitude ne dit rien de cela.</p>
+      </div>
+    </div>
+  </div>
+  <div class="pied"><span>III. La comparaison</span><span class="numero"></span></div>
+</section>
+
+<!-- ============================ 23. SECTION MLOPS ============================ -->
+<section class="diapo sombre" style="justify-content:center">
+  <div class="corps">
+    <p class="surtitre">Partie IV</p>
+    <h1>La démarche MLOps</h1>
+    <p style="font-size:19px; margin-top:22px; max-width:840px" class="doux">
+      MLOps est la contraction de <em>Machine Learning</em> et <em>Operations</em>. C'est
+      l'ensemble des pratiques qui font qu'un modèle ne reste pas coincé dans un notebook,
+      mais qu'il finit en production, surveillé, et qu'on puisse le remplacer sans tout casser.
+    </p>
+    <div class="trois-col" style="margin-top:40px">
+      <div class="carte">
+        <h3>Tracer</h3>
+        <p class="doux">Chaque expérimentation enregistrée avec ses réglages et ses scores.</p>
+      </div>
+      <div class="carte">
+        <h3>Tester</h3>
+        <p class="doux">48 tests automatisés, exécutés avant chaque mise en ligne.</p>
+      </div>
+      <div class="carte">
+        <h3>Surveiller</h3>
+        <p class="doux">Des traces en production et une alerte quand le modèle dérive.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ 24. MLFLOW ============================ -->
+<section class="diapo">
+  <p class="surtitre">MLOps · Brique 1 et 2</p>
+  <h2>MLflow : suivre les expérimentations, centraliser les modèles</h2>
+  <div class="corps">
+    <div class="deux-col large-gauche">
+      <div>
+        <img class="capture contenue" style="max-height:230px" src="../captures/mlflow-registry.png"
+             alt="Le catalogue de modèles MLflow avec les trois modèles enregistrés en version 1">
+        <p class="legende">Le catalogue de modèles : les trois approches enregistrées et versionnées.</p>
+      </div>
+      <div>
+        <h3>Le suivi des expérimentations</h3>
+        <p class="petit"><strong>14 entraînements</strong> enregistrés avec leurs réglages, leurs
+        scores et leur durée. Sans cela, au bout de quinze essais, plus personne ne sait quelle
+        configuration avait donné le meilleur résultat ni avec quels paramètres.</p>
+        <p class="petit">Les graphiques, matrices de confusion et courbes ROC sont attachés à
+        chaque expérimentation et restent consultables une fois le notebook fermé.</p>
+
+        <h3 style="margin-top:18px">La centralisation des modèles</h3>
+        <p class="petit">Le catalogue apporte trois choses qu'un simple fichier sauvegardé
+        n'apporte pas : un <strong>numéro de version</strong>, une <strong>signature</strong> qui
+        décrit ce que le modèle attend en entrée, et le <strong>lien vers l'expérimentation</strong>
+        qui l'a produit.</p>
+        <p class="petit doux">Un point de méthode : chaque modèle enregistré a été
+        <strong>rechargé et retesté</strong>. Un modèle qu'on n'a pas ressorti n'est pas un modèle
+        enregistré.</p>
+      </div>
+    </div>
+  </div>
+  <div class="pied"><span>IV. La démarche MLOps</span><span class="numero"></span></div>
+</section>
+
+<!-- ============================ 25. GIT ============================ -->
+<section class="diapo">
+  <p class="surtitre">MLOps · Brique 3</p>
+  <h2>Le versioning du code</h2>
+  <div class="corps">
+    <div class="deux-col">
+      <div>
+        <img class="capture contenue" style="max-height:250px" src="../captures/depot-github.png"
+             alt="La page d'accueil du dépôt GitHub avec son arborescence">
+        <p class="legende">github.com/Dimitriwts/projet7-analyse-sentiments</p>
+      </div>
+      <div>
+        <img class="capture contenue" style="max-height:250px" src="../captures/commits.png"
+             alt="L'historique des commits du projet">
+        <p class="legende">L'historique des commits.</p>
+      </div>
+    </div>
+    <div class="carte" style="margin-top:20px; background:var(--accent-clair)">
+      <h3>Un choix de méthode : des messages de commit qui expliquent, pas qui décrivent</h3>
+      <p>Un message comme « correction bug » n'apprend rien à personne. Chaque commit de ce projet
+      explique <strong>pourquoi</strong> le changement a été fait, avec les chiffres qui l'ont
+      motivé. Exemple réel : « Retirer les mots vides dégrade le modèle de 1,4 point : les
+      bigrammes ont besoin de ces mots pour former "not good" ».</p>
+      <p>Six mois plus tard, c'est cet historique qui permet de comprendre une décision sans avoir
+      à la redécouvrir. C'est aussi ce qui rend le dépôt lisible par quelqu'un d'autre que moi.</p>
+    </div>
+  </div>
+  <div class="pied"><span>IV. La démarche MLOps</span><span class="numero"></span></div>
+</section>
+
+<!-- ============================ 26. TESTS ============================ -->
+<section class="diapo">
+  <p class="surtitre">MLOps · Brique 4</p>
+  <h2>Les tests unitaires automatisés</h2>
+  <div class="corps">
+    <div class="deux-col large-gauche">
+      <div>
+        <img class="capture contenue" style="max-height:340px" src="../captures/tests-unitaires.png"
+             alt="L'exécution des 48 tests unitaires dans le pipeline GitHub Actions">
+        <p class="legende">Les 48 tests exécutés automatiquement dans le pipeline, avant tout déploiement.</p>
+      </div>
+      <div>
+        <h3>Quatre groupes de tests</h3>
+        <p class="petit"><strong>1.</strong> La synchronisation du nettoyage entre entraînement et
+        production. <strong>2.</strong> La présence et la cohérence des artefacts du modèle.
+        <strong>3.</strong> Les réponses des routes de l'API. <strong>4.</strong> Le refus propre
+        des entrées invalides.</p>
+
+        <div class="carte" style="background:var(--accent-clair); margin-top:16px">
+          <h3>Le test le plus important du projet</h3>
+          <p style="font-family:Consolas,monospace; font-size:13px">
+            test_le_nettoyage_est_identique_entre_src_et_api</p>
+          <p>Le tweet doit être nettoyé <strong>exactement de la même façon</strong> à
+          l'entraînement et en production. Si les deux versions divergent, le modèle reçoit en
+          ligne un texte qui ne ressemble pas à ce qu'il a appris, et ses réponses se dégradent
+          <strong>sans qu'aucune erreur ne s'affiche nulle part</strong>.</p>
+          <p>Ce piège porte un nom, le <em>training/serving skew</em>. Ce test le rend impossible :
+          si les deux fichiers diffèrent d'un seul octet, le déploiement échoue.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="pied"><span>IV. La démarche MLOps</span><span class="numero"></span></div>
+</section>
+
+<!-- ============================ 27. PIPELINE ============================ -->
+<section class="diapo">
+  <p class="surtitre">MLOps · Brique 5</p>
+  <h2>Le pipeline de déploiement continu</h2>
+  <div class="corps">
+    <img class="capture contenue" style="max-height:210px" src="../captures/4-pipeline-github-actions.png"
+         alt="Le pipeline GitHub Actions avec les deux jobs au vert">
+    <p class="legende">Chaque envoi de code déclenche les tests, puis le déploiement s'ils passent tous.</p>
+    <div class="trois-col" style="margin-top:22px">
+      <div class="carte">
+        <span class="pastille">1</span>
+        <h3>Les tests d'abord</h3>
+        <p class="petit">Ils s'exécutent avec les dépendances de l'API et non celles de la
+        modélisation : ils doivent tourner dans <strong>le même environnement que la
+        production</strong>, sinon ils ne prouvent rien.</p>
+      </div>
+      <div class="carte">
+        <span class="pastille">2</span>
+        <h3>Le déploiement ensuite</h3>
+        <p class="petit">Le job de déploiement <strong>dépend</strong> du job de tests. Si un seul
+        test échoue, il est annulé et la version en ligne reste celle qui marchait. Personne ne
+        peut mettre en ligne une version cassée.</p>
+      </div>
+      <div class="carte">
+        <span class="pastille">3</span>
+        <h3>La vérification enfin</h3>
+        <p class="petit">Le pipeline interroge la route de santé de l'API après déploiement. Un
+        déploiement peut réussir sans que l'application démarre : mieux vaut échouer franchement
+        que laisser croire que tout va bien.</p>
+      </div>
+    </div>
+  </div>
+  <div class="pied"><span>IV. La démarche MLOps</span><span class="numero"></span></div>
+</section>
+
+<!-- ============================ 28. SECTION PRODUCTION ============================ -->
+<section class="diapo sombre" style="justify-content:center">
+  <div class="corps">
+    <p class="surtitre">Partie V</p>
+    <h1>La mise en production</h1>
+    <p style="font-size:19px; margin-top:22px; max-width:840px" class="doux">
+      Un modèle qui fonctionne dans un notebook ne vaut rien tant qu'il n'est pas
+      en ligne. C'est là que j'ai passé autant de temps qu'à le construire, et
+      c'est là que se trouvaient les vraies difficultés.
+    </p>
+  </div>
+</section>
+
+<!-- ============================ 29. DU NOTEBOOK A LA PRODUCTION ============================ -->
+<section class="diapo">
+  <h2>Ce qui casse entre le notebook et la production</h2>
+  <div class="corps">
+    <div class="trois-col" style="margin-bottom:24px">
+      <div class="carte">
+        <span class="pastille rouge">1</span>
+        <h3>Le modèle ne rentre pas</h3>
+        <p class="petit">Le serveur gratuit est limité à <strong>1 Go de mémoire</strong>, quand
+        TensorFlow en pèse 600 à la seule installation.</p>
+        <p class="petit"><strong>Solution :</strong> conversion au format TensorFlow Lite. De
+        plusieurs centaines de mégaoctets à <strong>4,2 Mo</strong>, sans perdre un point de
+        performance. La conversion a d'ailleurs échoué au premier essai, il a fallu reconstruire
+        le réseau avec deux options particulières.</p>
+      </div>
+      <div class="carte">
+        <span class="pastille rouge">2</span>
+        <h3>Une sauvegarde qui ne finit jamais</h3>
+        <p class="petit">L'enregistrement d'un modèle est resté bloqué <strong>46 minutes</strong>
+        sans message d'erreur.</p>
+        <p class="petit"><strong>Diagnostic</strong> avec un outil de vidage de pile : la
+        bibliothèque avait changé son format de sauvegarde par défaut pour un format plus sûr,
+        mais qui parcourt l'objet élément par élément. Avec 300 000 termes de vocabulaire, cela
+        ne se terminait jamais.</p>
+      </div>
+      <div class="carte">
+        <span class="pastille rouge">3</span>
+        <h3>Un entraînement 15 fois plus lent</h3>
+        <p class="petit">Un cycle est passé de <strong>65 à 941 secondes</strong> sans qu'une
+        ligne de code ait changé.</p>
+        <p class="petit"><strong>La cause n'était pas le modèle mais la mémoire</strong> : la
+        machine saturée écrivait sur le disque. Un chargement de données trop gourmand a été
+        corrigé, ramenant l'occupation de 1 068 Mo à 45 Mo.</p>
+      </div>
+    </div>
+    <div class="carte" style="background:var(--accent-clair)">
+      <h3>Leur point commun, et pourquoi c'est le coeur du sujet</h3>
+      <p><strong>Aucun de ces trois incidents ne provoque d'erreur visible.</strong> Le système
+      continue de fonctionner, simplement mal. Un modèle qui met quinze fois plus de temps, une
+      sauvegarde qui traîne, une conversion qu'on croit réussie : rien ne s'affiche en rouge.</p>
+      <p>C'est exactement ce que la démarche MLOps cherche à rendre détectable, et c'est pourquoi
+      chaque transformation du modèle a été suivie d'une vérification chiffrée.</p>
+    </div>
+  </div>
+  <div class="pied"><span>V. La mise en production</span><span class="numero"></span></div>
+</section>
+
+<!-- ============================ 30. L'API ============================ -->
+<section class="diapo">
+  <h2>L'API de prédiction, déployée sur Azure</h2>
+  <div class="corps">
+    <div class="deux-col large-gauche">
+      <div>
+        <img class="capture contenue" style="max-height:330px" src="../captures/api-docs.png"
+             alt="La documentation interactive de l'API déployée">
+        <p class="legende">La documentation interactive, générée automatiquement par FastAPI.</p>
+      </div>
+      <div>
+        <div style="display:flex; gap:30px; margin-bottom:18px">
+          <div><div class="chiffre vert">4,2 Mo</div><div class="chiffre-libelle">le modèle déployé</div></div>
+          <div><div class="chiffre vert">0,16 ms</div><div class="chiffre-libelle">par prédiction</div></div>
+        </div>
+        <h3>Trois routes seulement</h3>
+        <p class="petit"><strong>/</strong> décrit l'API et le modèle réellement déployé.
+        <strong>/sante</strong> est interrogée par Azure pour vérifier que l'application vit.
+        <strong>/prediction</strong> reçoit un texte brut et renvoie un sentiment.</p>
+
+        <h3 style="margin-top:16px">Cinq dépendances contre vingt-deux</h3>
+        <p class="petit">Ni TensorFlow, ni pandas, ni scikit-learn. C'est une contrainte
+        matérielle, pas une coquetterie. Moins il y a de code en production, moins il y a de
+        choses qui peuvent casser.</p>
+
+        <h3 style="margin-top:16px">La vérification qui compte</h3>
+        <p class="petit">Les prédictions en ligne sont <strong>identiques au chiffre près</strong>
+        à celles mesurées en local. « the flight was not good » donne 0,0365 sur ma machine comme
+        sur le serveur.</p>
+      </div>
+    </div>
+  </div>
+  <div class="pied"><span>V. La mise en production</span><span class="numero"></span></div>
+</section>
+
+<!-- ============================ 31. SUIVI EN PRODUCTION ============================ -->
+<section class="diapo">
+  <h2>Le suivi de la performance en production</h2>
+  <div class="corps">
+    <div class="deux-col">
+      <div>
+        <img class="capture contenue" style="max-height:300px" src="../captures/1-interface-streamlit.png"
+             alt="L'interface de test avec la prédiction et les boutons de validation">
+        <p class="legende">L'interface interroge l'API déployée et demande à l'utilisateur de valider.</p>
+      </div>
+      <div>
+        <h3>Pourquoi demander l'avis de l'utilisateur</h3>
+        <p class="petit">Un modèle se dégrade avec le temps. Le langage évolue, les sujets
+        changent, et les tweets d'aujourd'hui ne ressemblent plus à ceux de 2009 sur lesquels il
+        a appris. On appelle cela la <strong>dérive</strong>.</p>
+        <p class="petit">Son danger est qu'elle ne se voit pas : le modèle continue de répondre
+        avec assurance, simplement il se trompe plus souvent. Demander à l'utilisateur de
+        signaler les erreurs est le moyen le plus direct de la détecter.</p>
+
+        <div class="carte" style="margin-top:16px">
+          <h3>Ce que contient chaque trace</h3>
+          <p class="petit">Pas seulement « il y a eu une erreur », mais de quoi en faire quelque
+          chose : le tweet, sa version nettoyée, le sentiment prédit, la probabilité, et
+          <strong>l'écart au seuil de décision</strong>.</p>
+          <p class="petit">Ce dernier champ distingue un modèle qui se trompe <strong>en
+          hésitant</strong>, ce qui est acceptable, d'un modèle qui se trompe <strong>avec
+          aplomb</strong>, ce qui l'est beaucoup moins. Aucun score global ne montre cela.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="pied"><span>V. La mise en production</span><span class="numero"></span></div>
+</section>
+
+<!-- ============================ 32. TRACES ET ALERTE ============================ -->
+<section class="diapo">
+  <h2>Les traces et le déclenchement de l'alerte</h2>
+  <div class="corps">
+    <div class="deux-col">
+      <div>
+        <img class="capture contenue" style="max-height:260px" src="../captures/traces-app-insights.png"
+             alt="Les traces dans Application Insights avec leurs dimensions personnalisées">
+        <p class="legende">Les traces structurées dans Application Insights, interrogeables en KQL.</p>
+      </div>
+      <div>
+        <img class="capture contenue" style="max-height:260px" src="../captures/5-mail-alerte.png"
+             alt="Le courriel d'alerte reçu après trois prédictions contestées">
+        <p class="legende">Le courriel reçu : valeur mesurée 3, seuil 2.</p>
+      </div>
+    </div>
+    <div class="deux-col" style="margin-top:18px">
+      <div class="carte" style="background:#DDEFE5">
+        <h3 style="color:var(--positif)">La règle, testée pour de vrai</h3>
+        <p class="petit">Trois prédictions contestées en cinq minutes déclenchent un courriel.
+        Test réel : <strong>trois traces envoyées à 11 h 08, alerte déclenchée à 11 h 09</strong>,
+        courriel reçu dans la foulée.</p>
+      </div>
+      <div class="carte" style="background:var(--accent-clair)">
+        <h3>Un défaut découvert en conditions réelles</h3>
+        <p class="petit">La première version envoyait <strong>cinq courriels pour un seul
+        incident</strong>, parce que la règle réévaluait la même fenêtre chaque minute. Corrigé en
+        rendant l'alerte persistante. C'est un problème connu, <strong>la fatigue d'alerte</strong> :
+        un système qui crie trop finit par ne plus être écouté.</p>
+      </div>
+    </div>
+  </div>
+  <div class="pied"><span>V. La mise en production</span><span class="numero"></span></div>
+</section>
+
+<!-- ============================ 33. AMELIORATION ============================ -->
+<section class="diapo">
+  <h2>Améliorer le modèle dans le temps</h2>
+  <div class="corps">
+    <p class="petit" style="margin-bottom:20px">Les traces collectées ne servent pas seulement à
+    alerter. Elles sont la matière première d'un cycle d'amélioration continue, et toute
+    l'infrastructure nécessaire est déjà en place.</p>
+    <div class="trois-col">
+      <div class="carte">
+        <span class="pastille">1</span>
+        <h3>À court terme<br><span class="doux petit" style="font-weight:400">analyser</span></h3>
+        <p class="petit">Sur quels types de tweets le modèle se trompe-t-il ? Les messages courts,
+        l'ironie, un vocabulaire apparu récemment ?</p>
+        <p class="petit">Un tableau de bord suivant le <strong>taux de contestation semaine après
+        semaine</strong> rendrait la dérive visible avant qu'elle ne devienne un problème.</p>
+      </div>
+      <div class="carte">
+        <span class="pastille">2</span>
+        <h3>À moyen terme<br><span class="doux petit" style="font-weight:400">réentraîner</span></h3>
+        <p class="petit">Les tweets signalés forment un jeu de données de grande valeur :
+        <strong>ce sont exactement les cas difficiles</strong>.</p>
+        <p class="petit">Les faire étiqueter par un humain puis les ajouter aux données
+        d'entraînement corrige le modèle là où il échoue vraiment, plutôt que de le renforcer là
+        où il réussit déjà.</p>
+      </div>
+      <div class="carte">
+        <span class="pastille">3</span>
+        <h3>À long terme<br><span class="doux petit" style="font-weight:400">automatiser</span></h3>
+        <p class="petit">Dès que suffisamment de nouveaux exemples sont collectés, un modèle
+        candidat est entraîné, <strong>comparé au modèle en place sur un jeu de test figé</strong>,
+        et déployé seulement s'il fait mieux.</p>
+        <p class="petit">Le suivi des expérimentations, le catalogue de modèles, les tests et le
+        déploiement automatique existent déjà : il ne manque que l'ordonnanceur.</p>
+      </div>
+    </div>
+  </div>
+  <div class="pied"><span>V. La mise en production</span><span class="numero"></span></div>
+</section>
+
+<!-- ============================ 34. CONCLUSION ============================ -->
+<section class="diapo">
+  <h2>Conclusion : la réponse au client</h2>
+  <div class="corps">
+    <div class="deux-col" style="margin-bottom:22px">
+      <div class="carte" style="background:#DDEFE5">
+        <h3 style="color:var(--positif)">Quel modèle déployer ?</h3>
+        <p><strong>Le modèle sur mesure avancé</strong>, comme le demandait le cahier des charges,
+        et les mesures le confirment. Il l'emporte à données égales, comprend les négations, et se
+        sert en 0,16 milliseconde pour 4,2 Mo.</p>
+      </div>
+      <div class="carte" style="background:var(--accent-clair)">
+        <h3>Faut-il investir dans BERT ?</h3>
+        <p><strong>Cela dépend de la quantité de données étiquetées.</strong> Avec 8 000 exemples,
+        BERT écrase la régression logistique de 3,6 points. Avec 1,2 million déjà disponibles et
+        sans carte graphique, le retour sur investissement est faible.</p>
+        <p>Investir dans BERT, ce n'est pas choisir un modèle, <strong>c'est acheter
+        l'infrastructure qui va avec</strong>.</p>
+      </div>
+    </div>
+    <h3>Ce que je retiens de ce projet</h3>
+    <div class="trois-col" style="margin-top:12px">
+      <div>
+        <p class="petit"><strong>Mesurer plutôt que supposer.</strong> Trois de mes intuitions se
+        sont révélées fausses : le retrait des mots vides, la cause d'un ralentissement, la
+        supériorité du LSTM. À chaque fois, la mesure a tranché.</p>
+      </div>
+      <div>
+        <p class="petit"><strong>Une comparaison doit être honnête.</strong> Le classement brut
+        des trois approches donnait un résultat faux. Il a fallu construire un jeu de test commun
+        et une courbe d'apprentissage pour répondre vraiment à la question posée.</p>
+      </div>
+      <div>
+        <p class="petit"><strong>La moitié du travail est après la modélisation.</strong> Faire
+        sortir le modèle du notebook m'a pris autant de temps que de le construire, et c'est là
+        que se trouvaient les vraies difficultés.</p>
+      </div>
+    </div>
+  </div>
+  <div class="pied"><span>VI. Bilan</span><span class="numero"></span></div>
+</section>
+
+<!-- ============================ 35. MERCI ============================ -->
+<section class="diapo sombre" style="justify-content:center; align-items:center; text-align:center">
+  <div class="corps" style="align-items:center">
+    <h1 style="font-size:64px">Merci</h1>
+    <p style="font-size:20px; margin-top:24px" class="doux">Des questions ?</p>
+    <div style="margin-top:48px; font-size:15px" class="doux">
+      <p>Le dépôt : <strong>github.com/Dimitriwts/projet7-analyse-sentiments</strong></p>
+      <p style="margin-top:6px">L'API en ligne :
+        <strong>air-paradis-sentiment-dimitriwts-e5fqa2gtcqb7czgc.francecentral-01.azurewebsites.net</strong></p>
+    </div>
+  </div>
+</section>
+
+</div>
+
+<div id="zoom"><img id="zoom-img" src="" alt=""></div>
+<div id="aide">← → pour naviguer · F11 plein écran · clic sur une image pour l'agrandir</div>
+
+<script>
+// ---------------------------------------------------------------------
+// Navigation entre les diapositives.
+// ---------------------------------------------------------------------
+const diapos = Array.from(document.querySelectorAll('.diapo'));
+let courante = 0;
+
+// On numerote les diapositives dans leur pied de page.
+diapos.forEach((d, i) => {
+  const numero = d.querySelector('.numero');
+  if (numero) numero.textContent = (i + 1) + ' / ' + diapos.length;
+});
+
+function afficher(index) {
+  courante = Math.max(0, Math.min(index, diapos.length - 1));
+  diapos.forEach((d, i) => d.classList.toggle('active', i === courante));
+  location.hash = courante + 1;
+}
+
+// La diapositive fait 1280 x 720 : on la met a l'echelle de la fenetre.
+function ajusterEchelle() {
+  const facteur = Math.min(window.innerWidth / 1280, window.innerHeight / 720);
+  diapos.forEach(d => d.style.transform = 'scale(' + facteur + ')');
+}
+
+document.addEventListener('keydown', e => {
+  if (document.getElementById('zoom').classList.contains('ouvert')) {
+    if (e.key === 'Escape') fermerZoom();
+    return;
+  }
+  if (['ArrowRight', 'PageDown', ' '].includes(e.key)) { e.preventDefault(); afficher(courante + 1); }
+  if (['ArrowLeft', 'PageUp'].includes(e.key)) { e.preventDefault(); afficher(courante - 1); }
+  if (e.key === 'Home') afficher(0);
+  if (e.key === 'End') afficher(diapos.length - 1);
+});
+
+// ---------------------------------------------------------------------
+// Agrandissement des captures, pour montrer un detail pendant l'oral.
+// ---------------------------------------------------------------------
+const zoom = document.getElementById('zoom');
+const zoomImg = document.getElementById('zoom-img');
+
+document.querySelectorAll('.capture').forEach(img => {
+  img.addEventListener('click', e => {
+    e.stopPropagation();
+    zoomImg.src = img.src;
+    zoomImg.alt = img.alt;
+    zoom.classList.add('ouvert');
+  });
+});
+function fermerZoom() { zoom.classList.remove('ouvert'); }
+zoom.addEventListener('click', fermerZoom);
+
+window.addEventListener('resize', ajusterEchelle);
+ajusterEchelle();
+
+// On reprend a la diapositive indiquee dans l'adresse, si elle existe.
+const depart = parseInt(location.hash.replace('#', ''), 10);
+afficher(Number.isFinite(depart) && depart > 0 ? depart - 1 : 0);
+</script>
+
+</body>
+</html>
