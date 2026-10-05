@@ -713,14 +713,12 @@ td.num { font-variant-numeric: tabular-nums; }
         l'information qu'on cherchait à capturer.</p>
       </div>
       <div>
-        <h3>Ce que j'en retiens</h3>
-        <p class="petit">Le plan d'expérimentation complet, quatre configurations pour deux
-        facteurs, coûte deux minutes de calcul et évite de décider à l'intuition.</p>
-        <p class="petit">Les quatre essais sont enregistrés dans MLflow avec leurs réglages et
-        leurs scores. <strong>La décision se prend sur la mesure</strong>, et elle reste
-        vérifiable des mois plus tard.</p>
-        <p class="petit doux">Modèle retenu : paires de mots, mots vides conservés, entraîné sur
-        les 1 214 000 tweets d'entraînement.</p>
+        <h3>Les mêmes chiffres, vus dans MLflow</h3>
+        <img class="capture" src="../captures/mlflow-runs-classique.png"
+             alt="L'interface MLflow affichant les six runs de l'expérience du modèle classique avec leurs métriques">
+        <p class="legende">Le tableau ci-dessus n'est pas recopié à la main : chaque ligne est un
+        run enregistré, avec ses réglages, ses scores et sa durée. <strong>La décision se prend
+        sur la mesure</strong>, et elle reste vérifiable des mois plus tard.</p>
       </div>
     </div>
   </div>
@@ -1000,14 +998,23 @@ td.num { font-variant-numeric: tabular-nums; }
         L'affinage n'est pas une option, c'est une nécessité.</p>
       </div>
     </div>
-    <div class="carte" style="background:var(--accent-clair)">
-      <h3>Pourquoi BERT figé est-il si mauvais ? Ce n'est pas une anomalie.</h3>
+    <div class="deux-col large-gauche" style="margin-bottom:18px">
+      <div>
+        <img class="capture" src="../captures/mlflow-runs-bert.png"
+             alt="L'interface MLflow affichant les trois runs de l'expérience BERT avec leurs métriques">
+        <p class="legende">Les trois runs de l'expérience BERT dans MLflow. Le rappel négatif,
+        la mesure qui intéresse Air Paradis, chute lui aussi : 0,757 pour BERT figé contre 0,798
+        pour BERT affiné.</p>
+      </div>
+      <div class="carte" style="background:var(--accent-clair)">
+        <h3>Pourquoi BERT figé est-il si mauvais ? Ce n'est pas une anomalie.</h3>
       <p>BERT a été pré-entraîné à <strong>deviner des mots masqués</strong>, pas à résumer des
       phrases. Le vecteur qu'on récupère pour représenter le tweet entier n'a jamais été entraîné
       à porter un sens global : il n'a été entraîné à rien du tout tant qu'on ne l'affine pas.</p>
       <p>C'est un résultat documenté dans la littérature, et c'est ce qui a motivé la création de
-      modèles spécialisés comme Sentence-BERT. <strong>Sans affinage, BERT est un moteur puissant
-      mais débrayé.</strong></p>
+        modèles spécialisés comme Sentence-BERT. <strong>Sans affinage, BERT est un moteur
+        puissant mais débrayé.</strong></p>
+      </div>
     </div>
   </div>
   <div class="pied"><span>II. Les trois approches</span><span class="numero"></span></div>
