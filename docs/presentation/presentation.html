@@ -264,60 +264,34 @@ td.num { font-variant-numeric: tabular-nums; }
   <div class="pied"><span>Sommaire</span><span class="numero"></span></div>
 </section>
 
-<!-- ==================== 3. COMMENT J'AI TRAVAILLE AVEC L'IA ==================== -->
+<!-- ==================== 3. COMMENT JE ME SUIS SERVI DE L'IA ==================== -->
 <section class="diapo">
   <p class="surtitre">Avant de commencer</p>
-  <h2>Comment j'ai travaillé avec l'IA, et comment je l'ai contrôlée</h2>
+  <h2>Comment je me suis servi de l'IA</h2>
   <div class="corps">
-    <p class="petit" style="margin-bottom:18px">Je préfère le dire en ouverture plutôt qu'en
-    réponse à une question. Je me suis aidé d'un assistant IA tout au long de ce projet. Ce qui
-    m'intéresse ici n'est pas de l'avoir utilisé, c'est <strong>la façon dont je l'ai
-    contrôlé</strong>, parce que c'est là que se joue la différence.</p>
+    <p style="margin-bottom:26px">Je préfère le dire en ouverture plutôt qu'en réponse à une
+    question. Je me suis aidé d'un assistant IA tout au long de ce projet.</p>
 
-    <div class="trois-col" style="margin-bottom:20px">
+    <div class="deux-col">
       <div class="carte">
-        <span class="pastille">1</span>
-        <h3>Ce pour quoi je m'en suis servi</h3>
-        <p class="petit">Écrire du code répétitif, expliquer un message d'erreur, proposer des
-        pistes quand je bloquais, et relire mon travail de façon critique.</p>
+        <h3>Ce que je lui ai demandé</h3>
+        <p>Annoter et commenter du code.</p>
+        <p>Démarrer un notebook, pour ne pas partir de la page blanche.</p>
+        <p>Relire mon code.</p>
+        <p>Et surtout <strong>challenger mes résultats</strong>.</p>
       </div>
-      <div class="carte">
-        <span class="pastille">2</span>
-        <h3>Ma règle, tenue du début à la fin</h3>
-        <p class="petit"><strong>Aucun chiffre de ce support ne vient d'une suggestion.</strong>
-        Chacun sort d'une exécution que je peux rouvrir, dans un notebook ou dans MLflow. Quand
-        une explication était plausible mais non mesurée, je l'ai mesurée.</p>
-      </div>
-      <div class="carte">
-        <span class="pastille">3</span>
-        <h3>Ce que ça m'a appris</h3>
-        <p class="petit">Un assistant propose des causes vraisemblables, et une cause
-        vraisemblable n'est pas une cause. Le travail d'ingénieur commence là : décider quoi
-        mesurer pour trancher.</p>
+      <div class="carte" style="background:var(--accent-clair)">
+        <h3>Ce que j'en retiens</h3>
+        <p><strong>Elle se trompe.</strong> Plusieurs fois dans ce projet elle m'a donné une
+        explication plausible qui était fausse, donc je vérifie tout par une mesure.</p>
+        <p>Mais elle m'a aussi fait comprendre des points que j'avais survolés, et surtout
+        <strong>elle m'a montré où je m'étais trompé et où un de mes résultats n'était pas
+        cohérent</strong>.</p>
       </div>
     </div>
 
-    <div class="deux-col large-gauche">
-      <div class="carte" style="background:#F7DEDE">
-        <h3 style="color:var(--negatif)">Quatre fois où elle s'est trompée, et comment je l'ai su</h3>
-        <p class="petit">Une sauvegarde bloquée 46 minutes attribuée au mauvais composant. La vraie
-        cause, trouvée en inspectant la pile d'exécution, était la bibliothèque de sérialisation.</p>
-        <p class="petit">Un entraînement passé de 65 à 941 secondes, expliqué deux fois de suite
-        par une mauvaise raison. La vraie cause était la mémoire saturée qui écrivait sur le disque.</p>
-        <p class="petit">Une bibliothèque déclarée indisponible pour ma version de Python. Une
-        requête directe au dépôt de paquets a montré le contraire.</p>
-        <p class="petit">Un réglage d'alerte conseillé à tort, qui m'a valu cinq courriels pour
-        un seul incident.</p>
-      </div>
-      <div class="carte" style="background:#DDEFE5">
-        <h3 style="color:var(--positif)">Et une fois où elle a trouvé ce que j'avais raté</h3>
-        <p>En lui demandant une relecture critique de mes propres résultats, elle a montré que ma
-        conclusion principale, un écart de 0,57 point, <strong>n'était pas démontrée</strong> :
-        mesurée sur 4 000 tweets, elle était plus petite que ma marge d'erreur.</p>
-        <p>J'ai refait la mesure sur 251 730 tweets. La conclusion tient, et l'écart est même
-        plus large. C'est la diapositive 23.</p>
-      </div>
-    </div>
+    <p style="margin-top:26px" class="doux">Le plus utile n'a pas été de produire du code,
+    mais de faire relire mon travail par quelque chose qui n'avait pas envie que ça marche.</p>
   </div>
   <div class="pied"><span>Avant de commencer</span><span class="numero"></span></div>
 </section>
