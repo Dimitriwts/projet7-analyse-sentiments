@@ -39,6 +39,12 @@ models/
 # Chaine de connexion Application Insights, identifiants Azure, etc.
 .env
 
+# --- Notes personnelles ----------------------------------------------------
+# Preparation de la soutenance : reponses aux questions difficiles, munitions,
+# points faibles assumes. Ce n'est pas un livrable et ca n'a rien a faire dans
+# le depot public.
+notes_soutenance.md
+
 # --- Archive de depot -----------------------------------------------------
 # Le zip des livrables est fabrique a partir du depot : il n'a pas a y etre
 # versionne, ce serait une copie de ce qui est deja la.

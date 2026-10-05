@@ -9,6 +9,25 @@ Air Paradis.
 
 ---
 
+## Les livrables, et où les trouver
+
+| Numéro | Livrable | Où il se trouve |
+|---|---|---|
+| 1 | L'API de prédiction, déployée sur un service Cloud | [api/](api/), et [le pipeline qui la déploie](.github/workflows/azure-deploy.yml) |
+| 2 | Les scripts des trois approches, avec le suivi MLflow | [notebooks/](notebooks/) et [src/](src/) |
+| 3 | Le dossier de code versionné | ce dépôt, [son historique de commits](https://github.com/Dimitriwts/projet7-analyse-sentiments/commits/main) |
+| 4 | L'interface de test de l'API | [interface/app_streamlit.py](interface/app_streamlit.py) |
+| 5 | L'article de blog | [docs/article_blog.md](docs/article_blog.md) |
+| 6 | Le support de soutenance | [docs/presentation/](docs/presentation/), en PDF et en HTML navigable |
+
+Les cinq notebooks se lisent dans l'ordre : exploration, modèle classique,
+modèle avancé, BERT, puis comparaison et préparation de l'API. Si vous n'en
+ouvrez qu'un, ouvrez le [05](notebooks/05_comparaison_et_export.ipynb) : c'est
+celui qui compare les trois approches honnêtement et qui prépare le modèle
+déployé. Les résultats chiffrés sont résumés en [section 7](#7-les-résultats).
+
+---
+
 ## 1. L'objectif du projet
 
 Air Paradis veut être prévenue le plus tôt possible quand un message négatif
@@ -305,7 +324,64 @@ déployer.
 
 ## 7. Les résultats
 
-Section complétée à la fin de la modélisation.
+### Les scores bruts des trois approches
+
+| Approche | Tweets d'entraînement | Exactitude | AUC ROC |
+|---|---|---|---|
+| Classique, TF-IDF et régression logistique | 1 214 000 | 0,8218 | 0,9006 |
+| Avancé, GloVe et GRU bidirectionnel | 240 000 | 0,8131 | 0,8937 |
+| BERT, DistilBERT affiné | 8 000 | 0,7990 | 0,8800 |
+
+Lu tel quel, ce tableau dit que le modèle le plus simple gagne. C'est faux, et
+c'est le résultat le plus intéressant du projet.
+
+### Pourquoi ce classement est trompeur
+
+Regardez la colonne du milieu : il y a un facteur 150 entre la première ligne et
+la dernière. Je ne comparais pas trois modèles, je comparais trois quantités de
+données. Et chaque notebook avait tiré son propre jeu de test, donc les trois
+scores ne sont même pas mesurés sur les mêmes tweets.
+
+J'ai donc construit un jeu de test commun, fait de tweets qu'aucun des trois
+modèles n'avait jamais vus, puis tracé la courbe d'apprentissage du modèle
+classique pour pouvoir placer les deux autres au volume de données qu'ils ont
+réellement vu. Le détail est dans le notebook 05.
+
+### La comparaison à données égales
+
+Mesurée sur 251 730 tweets inconnus des trois modèles, avec le modèle réellement
+déployé :
+
+| Modèle | Son score | Le classique au même volume | Écart | Significatif ? |
+|---|---|---|---|---|
+| Avancé, au volume annoncé de 240 000 tweets | 0,8135 | 0,8055 | +0,80 point | oui, p de l'ordre de 10⁻³⁰ |
+| Avancé, au volume réellement appris de 216 000 | 0,8135 | 0,8034 | +1,01 point | oui, p de l'ordre de 10⁻⁴⁶ |
+| BERT affiné, 8 000 tweets | 0,7867 | 0,7508 | +3,59 points | oui |
+
+Le test utilisé est celui de McNemar. Comme les deux modèles jugent exactement
+les mêmes tweets, il ne regarde que ceux sur lesquels ils sont en désaccord et
+demande si ces désaccords penchent d'un côté plus souvent que ne le ferait le
+hasard. C'est bien plus sensible qu'une comparaison de deux pourcentages.
+
+**Les deux modèles avancés gagnent.** Le classement brut était entièrement un
+artefact de la quantité de données.
+
+### Ce qui part en production
+
+Le modèle avancé, converti en TensorFlow Lite : 4,2 Mo au lieu de plusieurs
+centaines, 0,15 milliseconde par prédiction, et cinq dépendances au lieu de
+vingt-deux. La conversion coûte 0,07 point d'exactitude, mesuré et assumé.
+
+### Les autres mesures du projet
+
+Retirer les mots vides fait perdre 1,4 point quand on utilise les paires de
+mots, l'inverse de ce qu'on lit partout : les paires ont besoin de ces mots pour
+former « not good ». GloVe l'emporte sur un Word2Vec entraîné sur nos tweets de
+1,26 point. Figer les embeddings vaut mieux que les affiner avec seulement
+240 000 tweets. Le GRU est 25 % plus rapide que le LSTM à score identique. Et
+BERT sans affinage obtient 0,7690, le plus mauvais score du projet, ce qui
+s'explique : il a été pré-entraîné à deviner des mots masqués, pas à résumer une
+phrase.
 
 ---
 

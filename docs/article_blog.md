@@ -345,6 +345,63 @@ seulement s'il fait mieux. Toute l'infrastructure nécessaire, le suivi des
 expérimentations, le catalogue de modèles, les tests et le déploiement
 automatique, est déjà en place.
 
+## La mesure qui compte vraiment pour notre cliente
+
+Nous venons de comparer des exactitudes sur une dizaine de paragraphes. Il faut
+maintenant dire une chose gênante : l'exactitude n'est pas la bonne mesure pour
+ce besoin. Elle compte les deux erreurs de la même façon, alors que pour Air
+Paradis elles ne coûtent pas pareil. Signaler à tort un tweet positif coûte
+trente secondes à un chargé de communication. Rater un tweet négatif coûte une
+crise qui démarre sans qu'on la voie.
+
+La mesure du besoin, c'est donc le **rappel sur la classe négative** : sur
+100 tweets réellement négatifs, combien le modèle en attrape.
+
+| Approche | Exactitude | Rappel négatif |
+|---|---|---|
+| Classique, 1 214 000 tweets | 0,8218 | 0,8143 |
+| Avancé, 240 000 tweets | 0,8131 | 0,8015 |
+| BERT affiné, 8 000 tweets | 0,7990 | 0,7980 |
+
+Le classement ne bouge pas, mais l'écart se resserre : sur la mesure qui
+intéresse la cliente, les trois modèles se tiennent en 1,6 point.
+
+Surtout, il reste un réglage que nous n'avions pas touché. Le modèle rend une
+probabilité, et c'est nous qui décidons à partir de quelle valeur on déclenche
+une alerte. Nous avions gardé 0,50, la valeur par défaut. Mesuré sur nos
+251 730 tweets avec le modèle déployé :
+
+| Seuil | Rappel négatif | Fausses alertes | Exactitude |
+|---|---|---|---|
+| 0,50, la valeur par défaut | 80,5 % | 22 335 | 0,8135 |
+| **0,55** | **83,1 %** | 25 635 | **0,8137** |
+| 0,60 | 85,5 % | 29 534 | 0,8102 |
+
+Passer de 0,50 à 0,55 attrape **3 332 bad buzz de plus sans rien perdre en
+exactitude**. La valeur par défaut n'était simplement pas la bonne pour ce
+besoin. Au-delà, à 0,60, on gagne encore des bad buzz mais on paye en fausses
+alertes, et cet arbitrage appartient à la cliente : nous lui donnons le tableau,
+elle choisit le point qui lui convient.
+
+## Les limites qu'il faut annoncer
+
+**Le prototype ne comprend que l'anglais.** Sentiment140 est un corpus anglais,
+et Air Paradis est une compagnie française. Pour le français il faudra soit
+réentraîner sur un corpus français étiqueté, soit utiliser un modèle multilingue
+déjà entraîné, soit traduire avant de prédire. La première option est la
+meilleure, et la plus coûteuse : ce qui pèse n'est pas le calcul, c'est la
+collecte des étiquettes.
+
+**Personne ne collecte encore les tweets.** Notre API traite un message par
+appel. Il manque en amont la récupération des mentions d'Air Paradis, et en aval
+la personne qui reçoit l'alerte et décide quoi en faire. Le modèle n'est pas le
+facteur limitant : à 0,16 milliseconde par tweet, une seule instance en absorbe
+plusieurs millions par jour.
+
+**Le corpus a quinze ans.** Les tweets datent de 2009. Le vocabulaire des
+réseaux sociaux a changé, et c'est précisément ce que le suivi en production
+doit permettre de détecter.
+
 ## Ce que nous en retenons
 
 Le modèle le plus sophistiqué n'est pas toujours le meilleur choix, mais ce

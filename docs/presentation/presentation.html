@@ -368,6 +368,10 @@ td.num { font-variant-numeric: tabular-nums; }
         <p class="petit">Je n'utilise que <strong>le texte et l'étiquette</strong> : l'API
         ne recevra qu'un texte, entraîner le modèle sur des informations qu'il n'aura pas
         en production n'aurait aucun sens.</p>
+        <p class="petit" style="background:#F7DEDE; padding:10px 12px; border-radius:8px">
+        <strong>Une conséquence qu'il faut dire tout de suite :</strong> ces tweets sont en
+        anglais, donc le prototype ne sait traiter que l'anglais. Air Paradis est française.
+        J'y reviens en conclusion, avec ce que coûterait le français.</p>
       </div>
       <div>
         <div class="carte" style="background:var(--accent-clair)">
@@ -1201,7 +1205,8 @@ td.num { font-variant-numeric: tabular-nums; }
       <div>
         <img class="capture contenue" style="max-height:250px" src="../captures/depot-github.png"
              alt="La page d'accueil du dépôt GitHub avec son arborescence">
-        <p class="legende">github.com/Dimitriwts/projet7-analyse-sentiments</p>
+        <p class="legende" style="font-size:15px; font-style:normal">Le dépôt :
+        <a href="https://github.com/Dimitriwts/projet7-analyse-sentiments" style="color:var(--nuit); font-weight:700">github.com/Dimitriwts/projet7-analyse-sentiments</a></p>
       </div>
       <div>
         <img class="capture contenue" style="max-height:250px" src="../captures/commits.png"
@@ -1495,6 +1500,59 @@ td.num { font-variant-numeric: tabular-nums; }
   <div class="pied"><span>V. La mise en production</span><span class="numero"></span></div>
 </section>
 
+<!-- ================ 34. LA MESURE QUI COMPTE POUR LE CLIENT ================ -->
+<section class="diapo">
+  <p class="surtitre">VI. Bilan</p>
+  <h2>La mesure qui compte pour Air Paradis</h2>
+  <div class="corps">
+    <p class="petit" style="margin-bottom:16px">Depuis le début je compare des exactitudes.
+    Mais l'exactitude compte les deux erreurs de la même façon, alors que pour Air Paradis
+    elles ne coûtent pas pareil. La mesure du besoin, c'est le <strong>rappel sur la classe
+    négative</strong> : sur 100 tweets réellement négatifs, combien le modèle en attrape.</p>
+
+    <div class="deux-col" style="margin-bottom:18px">
+      <div>
+        <h3>Les trois approches sur cette mesure</h3>
+        <table style="margin-top:8px">
+          <tr><th>Approche</th><th>Exactitude</th><th>Rappel négatif</th></tr>
+          <tr><td>Classique, 1 214 000 tweets</td><td class="num">0,8218</td><td class="num">0,8143</td></tr>
+          <tr class="mise-en-avant"><td>Avancé, 240 000 tweets</td><td class="num">0,8131</td><td class="num">0,8015</td></tr>
+          <tr><td>BERT affiné, 8 000 tweets</td><td class="num">0,7990</td><td class="num">0,7980</td></tr>
+        </table>
+        <p class="petit" style="margin-top:12px">Le classement ne change pas, mais l'écart se
+        resserre : sur la mesure qui intéresse le client, les trois modèles se tiennent en
+        1,6 point.</p>
+      </div>
+      <div>
+        <h3>Le seuil de décision est un réglage métier</h3>
+        <p class="petit">Le modèle rend une probabilité. C'est nous qui choisissons à partir
+        de quelle valeur on déclenche une alerte. Monter ce seuil élargit le filet.
+        Mesuré sur les 251 730 tweets, avec le modèle déployé :</p>
+        <table style="margin-top:8px">
+          <tr><th>Seuil</th><th>Rappel négatif</th><th>Fausses alertes</th><th>Exactitude</th></tr>
+          <tr><td>0,50, la valeur par défaut</td><td class="num">80,5 %</td><td class="num">22 335</td><td class="num">0,8135</td></tr>
+          <tr class="mise-en-avant"><td><strong>0,55</strong></td><td class="num">83,1 %</td><td class="num">25 635</td><td class="num">0,8137</td></tr>
+          <tr><td>0,60</td><td class="num">85,5 %</td><td class="num">29 534</td><td class="num">0,8102</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="carte" style="background:#DDEFE5">
+      <h3 style="color:var(--positif)">Ma recommandation, chiffrée</h3>
+      <p><strong>Passer le seuil de 0,50 à 0,55.</strong> Sur ce jeu de 251 730 tweets, cela
+      attrape <strong>3 332 bad buzz de plus</strong> sans rien perdre en exactitude, qui
+      passe même de 0,8135 à 0,8137. La valeur par défaut n'était tout simplement pas la
+      bonne pour ce besoin.</p>
+      <p>Si Air Paradis veut aller plus loin, 0,60 attrape 6 361 bad buzz de plus qu'au
+      départ, pour 7 199 fausses alertes supplémentaires et un tiers de point d'exactitude.
+      <strong>C'est au client de trancher</strong>, parce que le coût d'une fausse alerte est
+      une minute de chargé de communication, et celui d'un bad buzz raté se compte autrement.
+      Mon rôle est de lui donner le tableau, pas de choisir à sa place.</p>
+    </div>
+  </div>
+  <div class="pied"><span>VI. Bilan</span><span class="numero"></span></div>
+</section>
+
 <!-- ============================ 34. CONCLUSION ============================ -->
 <section class="diapo">
   <h2>Conclusion : la réponse au client</h2>
@@ -1515,6 +1573,33 @@ td.num { font-variant-numeric: tabular-nums; }
         l'infrastructure qui va avec</strong>.</p>
       </div>
     </div>
+    <div class="deux-col" style="margin-bottom:22px">
+      <div class="carte">
+        <h3>Ce que ce prototype ne fait pas encore</h3>
+        <p><strong>Il ne comprend que l'anglais.</strong> Pour le français, trois options :
+        réentraîner sur un corpus français étiqueté, utiliser un modèle multilingue déjà
+        entraîné, ou traduire avant de prédire. La première est la meilleure et la plus
+        coûteuse, c'est la collecte des étiquettes qui pèse, pas le calcul.</p>
+        <p><strong>Personne ne collecte les tweets.</strong> L'API traite un message par
+        appel. Il manque en amont la collecte des mentions d'Air Paradis et, en aval, la
+        personne qui reçoit l'alerte. Le modèle n'est pas le facteur limitant : à
+        0,16 milliseconde par tweet, une seule instance en absorbe plusieurs millions par jour.</p>
+      </div>
+      <div class="carte">
+        <h3>Ce que ça coûte, en euros</h3>
+        <table style="margin-top:6px">
+          <tr><th>Poste</th><th>Aujourd'hui</th><th>En service réel</th></tr>
+          <tr><td>Hébergement de l'API</td><td class="num">0 €, plan gratuit</td><td class="num">quelques dizaines d'€ par mois</td></tr>
+          <tr><td>Suivi et alertes</td><td class="num">environ 3 € par mois</td><td class="num">idem</td></tr>
+          <tr><td>Entraînement du modèle</td><td class="num">0 €, mon portable</td><td class="num">0 €, moins d'une heure</td></tr>
+          <tr><td>Entraînement de BERT</td><td class="num">non viable sans carte graphique</td><td class="num">location à l'heure</td></tr>
+        </table>
+        <p class="petit" style="margin-top:10px">Dépense réelle du projet : <strong>0,25 €</strong>
+        sur les 200 $ de crédits d'essai. Le modèle retenu est le seul des trois qui tienne dans
+        un plan gratuit, et c'est un argument de coût autant que de performance.</p>
+      </div>
+    </div>
+
     <h3>Ce que je retiens de ce projet</h3>
     <div class="trois-col" style="margin-top:12px">
       <div>
@@ -1543,9 +1628,13 @@ td.num { font-variant-numeric: tabular-nums; }
     <h1 style="font-size:64px">Merci</h1>
     <p style="font-size:20px; margin-top:24px" class="doux">Des questions ?</p>
     <div style="margin-top:48px; font-size:15px" class="doux">
-      <p>Le dépôt : <strong>github.com/Dimitriwts/projet7-analyse-sentiments</strong></p>
-      <p style="margin-top:6px">L'API en ligne :
-        <strong>air-paradis-sentiment-dimitriwts-e5fqa2gtcqb7czgc.francecentral-01.azurewebsites.net</strong></p>
+      <p>Le dépôt, avec tout l'historique :
+        <a href="https://github.com/Dimitriwts/projet7-analyse-sentiments" style="color:#9BD4FF; font-weight:700">github.com/Dimitriwts/projet7-analyse-sentiments</a></p>
+      <p style="margin-top:10px">L'API a été déployée et vérifiée en production
+        <strong>jusqu'au 5 octobre 2026</strong>, date d'expiration du crédit Azure gratuit.</p>
+      <p style="margin-top:4px; font-size:13px">La souscription est désactivée depuis, donc
+        l'adresse ne répond plus. Les preuves sont dans le dépôt et dans ce support :
+        documentation de l'API en ligne, pipeline au vert, traces et alerte.</p>
     </div>
   </div>
 </section>
