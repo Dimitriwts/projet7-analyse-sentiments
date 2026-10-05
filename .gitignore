@@ -45,6 +45,10 @@ models/
 # le depot public.
 notes_soutenance.md
 
+# Consignes de travail avec l'IA, reutilisables d'un projet a l'autre.
+# Ce n'est pas un livrable non plus.
+consignes_ia.md
+
 # --- Archive de depot -----------------------------------------------------
 # Le zip des livrables est fabrique a partir du depot : il n'a pas a y etre
 # versionne, ce serait une copie de ce qui est deja la.
