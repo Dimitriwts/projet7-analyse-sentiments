@@ -89,9 +89,22 @@ jobs:
     # la version en ligne reste celle qui marchait.
     needs: tests
 
-    # On ne deploie que depuis la branche principale, jamais depuis une branche
-    # de travail, meme si ses tests passent.
-    if: github.ref == 'refs/heads/main'
+    # Deux conditions pour deployer.
+    #
+    # La premiere : on ne deploie que depuis la branche principale, jamais
+    # depuis une branche de travail, meme si ses tests passent.
+    #
+    # La seconde est un interrupteur. Le credit Azure gratuit de 200 $ a expire
+    # le 05/10/2026 et la souscription est desormais desactivee : l'application
+    # repond 403 "Site Disabled" et le deploiement echoue forcement. Plutot que
+    # de laisser le pipeline rouge a chaque envoi de code, ce qui finit par etre
+    # ignore, j'ai mis le deploiement derriere une variable de depot.
+    #
+    # Pour le reactiver : Settings > Secrets and variables > Actions > onglet
+    # Variables > New repository variable, nommee DEPLOIEMENT_AZURE et valant
+    # actif. Sans elle, ce travail est proprement saute et le pipeline reste au
+    # vert, ce qui est honnete : rien n'a echoue, on a choisi de ne pas deployer.
+    if: github.ref == 'refs/heads/main' && vars.DEPLOIEMENT_AZURE == 'actif'
 
     environment:
       name: production

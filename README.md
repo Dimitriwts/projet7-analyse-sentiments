@@ -271,6 +271,23 @@ Une fois ces réglages en place, il n'y a plus rien à faire manuellement. Tout
 envoi de code sur la branche principale déclenche le pipeline, qui lance les
 tests puis déploie si et seulement s'ils passent.
 
+### État actuel : le déploiement est en pause
+
+Le crédit Azure gratuit de 200 $ a expiré et la souscription est désactivée
+depuis le 05/10/2026. L'application répond désormais `403 Site Disabled`, et
+toute tentative de déploiement échoue forcément.
+
+Plutôt que de laisser le pipeline échouer à chaque envoi de code, ce qui finit
+par être ignoré et masque les vraies pannes, j'ai mis l'étape de déploiement
+derrière un interrupteur. Les tests, eux, continuent de tourner à chaque fois.
+
+Pour réactiver le déploiement, il suffit de créer une variable de dépôt dans
+GitHub : **Settings → Secrets and variables → Actions → onglet Variables → New
+repository variable**, nommée `DEPLOIEMENT_AZURE` et valant `actif`. Tant
+qu'elle n'existe pas, l'étape est proprement sautée et le pipeline reste au
+vert, ce qui est la situation réelle : rien n'a échoué, j'ai choisi de ne pas
+déployer.
+
 ---
 
 ## 6. La démarche MLOps mise en oeuvre
