@@ -46,7 +46,7 @@ est inversé. Nous avons donc construit une liste expurgée, et écrit un test
 automatique qui échoue si quelqu'un y réintroduit un jour une négation.
 
 Nous avons aussi retiré 5 % de doublons, apparus après nettoyage : messages
-banals et spam publicitaire republié jusqu'à 1 500 fois. Les garder aurait
+banals et spam publicitaire republié exactement 1 484 fois. Les garder aurait
 placé un même tweet des deux côtés du partage entre entraînement et test, et
 gonflé nos scores sans raison.
 
@@ -161,17 +161,48 @@ données qu'ils ont réellement vue :
 
 | Modèle | Tweets | Son score | Le classique au même volume | Écart |
 |---|---|---|---|---|
-| Modèle avancé | 240 000 | 81,0 % | 80,4 % | **+0,6 point** |
+| Modèle avancé | 240 000 | 81,0 % | 80,4 % | +0,6 point |
 | BERT affiné | 8 000 | 78,7 % | 75,1 % | **+3,6 points** |
 
-**Les deux modèles avancés gagnent.** Le classement initial était entièrement un
-artefact de la quantité de données.
+L'ordre est le bon, mais en relisant ce tableau nous avons trouvé un défaut dans
+notre propre travail. Sur 4 000 tweets, une exactitude mesurée autour de 81 %
+n'est connue qu'à plus ou moins 1,2 point près. C'est la marge d'erreur
+inévitable quand on mesure sur un échantillon plutôt que sur la population
+entière. Or l'écart de 0,6 point du modèle avancé est plus petit que cette
+marge. Nous ne pouvions donc rien en conclure. Celui de BERT, lui, la dépasse
+largement.
 
-Et l'écart grandit à mesure que les données se raréfient, ce qui est la
-signature du transfert d'apprentissage : un modèle pré-entraîné apporte une
-connaissance de la langue qui compense le manque d'exemples. C'est précisément
-ce qui rend BERT intéressant quand on ne dispose que de quelques milliers
-d'exemples étiquetés, situation la plus fréquente en entreprise.
+Nous avions pourtant 279 087 tweets inutilisés sous la main. Nous avons donc
+refait la mesure sur 251 730 d'entre eux, équilibrés entre les deux classes,
+avec le modèle réellement déployé. La marge d'erreur tombe à plus ou moins
+0,15 point. Nous en avons profité pour corriger un second point : le réseau met
+10 % de ses données de côté pour sa validation, il n'a donc appris que sur
+216 000 tweets et non 240 000.
+
+| Comparaison, sur 251 730 tweets | Modèle avancé | Le classique au même volume | Écart |
+|---|---|---|---|
+| Au volume annoncé, 240 000 tweets | 81,35 % | 80,55 % | **+0,80 point** |
+| Au volume réellement appris, 216 000 | 81,35 % | 80,34 % | **+1,01 point** |
+
+Cette fois nous avons fait un vrai test statistique plutôt que de comparer deux
+pourcentages à l'oeil. Le test de McNemar est fait pour cette situation : les
+deux modèles jugent exactement les mêmes tweets, donc plutôt que de comparer
+deux scores globaux, il ne regarde que les tweets sur lesquels ils sont en
+désaccord et demande si ces désaccords penchent d'un côté plus souvent que ne le
+ferait le hasard. Sur 35 040 désaccords, 18 612 donnent raison au modèle avancé
+contre 16 428 au classique. La probabilité d'observer un tel déséquilibre si les
+deux modèles se valaient est de l'ordre de 1 sur 10²⁹.
+
+**Les deux modèles avancés gagnent, et cette fois c'est démontré.** Le classement
+initial était entièrement un artefact de la quantité de données. En prenant un
+échantillon trop petit, nous avions même sous-estimé notre propre résultat.
+
+L'écart est aussi plus marqué pour BERT, qui dispose de bien moins de données.
+C'est cohérent avec ce qu'on attend du transfert d'apprentissage : un modèle
+pré-entraîné apporte une connaissance de la langue qui compense le manque
+d'exemples. Nous ne mesurons cependant que deux modèles à deux volumes, ce qui
+ne suffit pas à affirmer une tendance générale. C'est une piste, pas une
+démonstration.
 
 ![Courbe d'apprentissage du modele classique, avec les points du modele avance et de BERT places au volume de donnees qu'ils ont vu](captures/2-courbe-apprentissage.png)
 
@@ -192,10 +223,16 @@ paires de phrases identiques à un mot près.
 | i would recommend it | 0,952 | 0,969 |
 | i would **not** recommend it | **0,209** ✅ | 0,776 ❌ |
 
-Les deux modèles gèrent la négation, ce dont le modèle classique était
-incapable par construction. Mais ils n'ont pas les mêmes angles morts : chacun
-réussit là où l'autre échoue. Un écart d'un demi-point d'exactitude ne dit rien
-de cela.
+Les deux modèles gèrent la négation. Le modèle classique s'en sort aussi, mais
+pour une raison différente et plus fragile : il ne lit pas l'ordre des mots, et
+c'est uniquement parce que nous lui avons donné les paires de mots qu'il
+reconnaît « not good » comme un motif à part entière. Testé sur « not good at
+all », il répond correctement négatif. Il échoue en revanche dès que la négation
+s'éloigne du mot qu'elle inverse, parce que la paire n'existe alors plus.
+
+Surtout, les deux modèles avancés n'ont pas les mêmes angles morts : chacun
+réussit là où l'autre échoue. Un écart d'un point d'exactitude ne dit rien de
+cela.
 
 ## La démarche MLOps : sortir du notebook
 
@@ -313,7 +350,7 @@ automatique, est déjà en place.
 Le modèle le plus sophistiqué n'est pas toujours le meilleur choix, mais ce
 n'est jamais l'exactitude seule qui tranche. Notre modèle avancé l'emporte à
 données égales, comprend les négations, et se sert en 0,16 milliseconde pour
-4 Mo. BERT fait mieux encore quand les données étiquetées sont rares, mais
+4,2 Mo. BERT fait mieux encore quand les données étiquetées sont rares, mais
 demande une infrastructure que ce prototype ne justifiait pas.
 
 Et surtout : une bonne partie du travail se joue après la modélisation. Nous

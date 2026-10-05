@@ -9,11 +9,7 @@
   "seuil_decision": 0.5,
   "version_tflite": "avec compression",
   "metriques_test_commun": {
-    "exactitude": 0.81,
-    "auc_roc": 0.8923,
-    "f1_macro": 0.81,
-    "precision_negatif": 0.8186,
-    "rappel_negatif": 0.7965,
-    "f1_negatif": 0.8074
+    "exactitude": 0.8093,
+    "auc_roc": 0.892
   }
 }

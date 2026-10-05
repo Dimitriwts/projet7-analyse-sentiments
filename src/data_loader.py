@@ -196,7 +196,8 @@ def preparer_donnees(forcer: bool = False) -> pd.DataFrame:
     # Je retire les doublons.
     # Environ 5 % des tweets nettoyés sont des textes strictement identiques :
     # des messages courts et banals comme "thanks" ou "good morning", et
-    # surtout du spam de robots, le même message republié jusqu'à 1 500 fois.
+    # surtout du spam de robots. J'affiche les plus répétés juste en dessous,
+    # pour que le chiffre cité dans l'article soit vérifiable ici.
     #
     # Pourquoi les enlever : à cause d'une fuite entre l'entraînement et le
     # test. Le découpage entre les deux se fait au hasard, donc si un même
@@ -210,6 +211,15 @@ def preparer_donnees(forcer: bool = False) -> pd.DataFrame:
     # des lignes, ce qui n'a aucune importance avec 1,6 million de tweets, et
     # je gagne une évaluation honnête.
     nombre_avant = len(donnees)
+
+    # Les textes les plus répétés, mesurés sur le corpus complet. Le
+    # notebook 01 ne les montre que sur un échantillon de 200 000 tweets,
+    # ce qui divise les comptes par huit environ.
+    repetitions = donnees["texte_nettoye"].value_counts().head(5)
+    print("  Les cinq textes les plus republies :")
+    for texte_repete, nombre in repetitions.items():
+        print(f"    {nombre:>5} fois : {texte_repete[:60]}")
+
     donnees = donnees.drop_duplicates(subset="texte_nettoye", keep="first").copy()
     print(f"  {formater_nombre(nombre_avant - len(donnees))} doublons, retires")
 

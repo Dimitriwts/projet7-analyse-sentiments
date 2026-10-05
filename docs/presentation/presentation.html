@@ -745,8 +745,8 @@ td.num { font-variant-numeric: tabular-nums; }
     </table>
     <p class="petit doux" style="margin-top:18px">
       GloVe l'emporte de <strong>1,26 point d'exactitude</strong>, et l'on peut voir pourquoi
-      plutôt que de se contenter du score. Détail savoureux : les 183 mots de notre vocabulaire
-      absents de GloVe sont des noms d'applications Twitter de 2009 disparues depuis,
+      plutôt que de se contenter du score. Détail savoureux : parmi les 183 mots de notre vocabulaire
+      absents de GloVe, on trouve des noms d'applications Twitter de 2009 disparues depuis,
       <em>twitterberry</em>, <em>ubertwitter</em>, <em>twitterfon</em>. Notre corpus a quinze ans.
     </p>
   </div>
@@ -1023,21 +1023,74 @@ td.num { font-variant-numeric: tabular-nums; }
       <div>
         <table>
           <tr><th>Modèle</th><th>Tweets</th><th>Lui</th><th>Le classique</th><th>Écart</th></tr>
-          <tr class="mise-en-avant"><td>Avancé</td><td class="num">240 000</td>
-            <td class="num">81,0 %</td><td class="num">80,4 %</td><td class="num">+0,6 pt</td></tr>
           <tr class="mise-en-avant"><td>BERT</td><td class="num">8 000</td>
             <td class="num">78,7 %</td><td class="num">75,1 %</td><td class="num">+3,6 pt</td></tr>
+          <tr><td>Avancé</td><td class="num">240 000</td>
+            <td class="num">81,0 %</td><td class="num">80,4 %</td><td class="num">+0,6 pt</td></tr>
         </table>
         <p class="petit" style="margin-top:14px"><strong>Les deux modèles avancés gagnent.</strong>
-        Le classement initial était entièrement un artefact de la quantité de données. Et l'écart
-        grandit quand les données se raréfient : c'est la signature du transfert d'apprentissage.</p>
+        Le classement initial était entièrement un artefact de la quantité de données.</p>
+        <p class="petit"><strong>Mais la seconde ligne m'a arrêté.</strong> Mesurée sur 4 000 tweets
+        seulement, elle ne prouve rien, et c'est le sujet de la diapositive suivante.</p>
       </div>
     </div>
   </div>
   <div class="pied"><span>III. La comparaison</span><span class="numero"></span></div>
 </section>
 
-<!-- ============================ 22. LA NEGATION ============================ -->
+<!-- ==================== 22. VERIFIER SA PROPRE CONCLUSION ==================== -->
+<section class="diapo">
+  <p class="surtitre">III. La comparaison</p>
+  <h2>Vérifier sa propre conclusion avant qu'on le fasse pour vous</h2>
+  <div class="corps">
+    <div class="deux-col" style="margin-bottom:20px">
+      <div class="carte" style="background:#F7DEDE">
+        <h3 style="color:var(--negatif)">Le défaut que j'ai trouvé dans mon travail</h3>
+        <p>J'avais mis de côté <strong>279 087 tweets</strong> qu'aucun des trois modèles n'avait
+        vus. Je n'en ai utilisé que <strong>4 000</strong>.</p>
+        <p>Sur 4 000 tweets, une exactitude n'est connue qu'à <strong>plus ou moins 1,2 point</strong>
+        près. Mon écart de 0,6 point était donc <strong>plus petit que ma propre marge d'erreur</strong>.
+        La bonne méthode, mais pas assez de données pour la faire parler.</p>
+      </div>
+      <div class="carte" style="background:#DDEFE5">
+        <h3 style="color:var(--positif)">La correction, en une minute de calcul</h3>
+        <p>Nouvelle mesure sur <strong>251 730 tweets</strong>, avec le modèle réellement déployé.
+        La marge tombe à <strong>plus ou moins 0,15 point</strong>.</p>
+        <p>J'en profite pour corriger un second point : le réseau garde 10 % de ses données pour sa
+        validation, il a donc appris sur <strong>216 000 tweets</strong> et non 240 000.</p>
+      </div>
+    </div>
+    <table style="margin-bottom:18px">
+      <tr><th>Comparaison, sur 251 730 tweets</th><th>Modèle avancé</th><th>Le classique au même volume</th><th>Écart</th><th>Test de McNemar</th></tr>
+      <tr><td>Première mesure, sur 4 000 tweets</td><td class="num">81,00 %</td><td class="num">80,43 %</td>
+          <td class="num">+0,57 pt</td><td style="color:var(--negatif); font-weight:700">non significatif</td></tr>
+      <tr class="mise-en-avant"><td>Au volume annoncé, 240 000 tweets</td><td class="num">81,35 %</td><td class="num">80,55 %</td>
+          <td class="num">+0,80 pt</td><td>p de l'ordre de 10<sup>-30</sup></td></tr>
+      <tr class="mise-en-avant"><td>Au volume réellement appris, 216 000</td><td class="num">81,35 %</td><td class="num">80,34 %</td>
+          <td class="num">+1,01 pt</td><td>p de l'ordre de 10<sup>-46</sup></td></tr>
+    </table>
+    <div class="deux-col">
+      <div>
+        <h3>Le test de McNemar, en une phrase</h3>
+        <p class="petit">Les deux modèles jugent exactement les mêmes tweets. Plutôt que de comparer
+        deux pourcentages, ce test ne regarde que les tweets sur lesquels ils sont <strong>en
+        désaccord</strong>, et demande si ces désaccords penchent d'un côté plus souvent que ne le
+        ferait le hasard. Sur 35 040 désaccords, 18 612 donnent raison au modèle avancé contre
+        16 428 au classique.</p>
+      </div>
+      <div class="carte" style="background:var(--accent-clair)">
+        <h3>Ce que j'en retiens</h3>
+        <p><strong>En prenant un échantillon trop petit, je sous-estimais mon propre résultat.</strong>
+        L'écart réel est de 0,80 point, pas 0,57.</p>
+        <p>Et la conclusion est maintenant démontrée, pas seulement observée. C'est la différence
+        entre un chiffre et un résultat.</p>
+      </div>
+    </div>
+  </div>
+  <div class="pied"><span>III. La comparaison</span><span class="numero"></span></div>
+</section>
+
+<!-- ============================ 23. LA NEGATION ============================ -->
 <section class="diapo">
   <h2>Ce que les scores ne disent pas : la négation</h2>
   <div class="corps">
@@ -1063,13 +1116,16 @@ td.num { font-variant-numeric: tabular-nums; }
     <div class="deux-col">
       <div class="carte" style="background:#DDEFE5">
         <h3 style="color:var(--positif)">Ce qui justifie toute l'approche</h3>
-        <p>Les deux modèles gèrent la négation, <strong>ce dont le modèle classique était
-        structurellement incapable</strong> puisqu'il ne voit pas l'ordre des mots.</p>
+        <p>Les deux modèles gèrent la négation. Le classique aussi, mais <strong>pour une raison
+        plus fragile</strong> : il ne lit pas l'ordre des mots, et c'est uniquement parce que je lui
+        ai donné les paires de mots qu'il reconnaît « not good » comme un motif.</p>
+        <p>Il échoue dès que la négation s'éloigne du mot qu'elle inverse, parce que la paire
+        n'existe alors plus.</p>
       </div>
       <div class="carte" style="background:var(--accent-clair)">
         <h3>Ce qu'aucun score ne montre</h3>
-        <p>Ils n'ont pas les mêmes angles morts : <strong>chacun réussit là où l'autre échoue</strong>.
-        Un écart d'un demi-point d'exactitude ne dit rien de cela.</p>
+        <p>Les deux modèles avancés n'ont pas les mêmes angles morts : <strong>chacun réussit là où
+        l'autre échoue</strong>. Un écart d'un point d'exactitude ne dit rien de cela.</p>
       </div>
     </div>
   </div>
