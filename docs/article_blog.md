@@ -189,8 +189,8 @@ pourcentages à l'oeil. Le test de McNemar est fait pour cette situation : les
 deux modèles jugent exactement les mêmes tweets, donc plutôt que de comparer
 deux scores globaux, il ne regarde que les tweets sur lesquels ils sont en
 désaccord et demande si ces désaccords penchent d'un côté plus souvent que ne le
-ferait le hasard. Sur 35 040 désaccords, 18 612 donnent raison au modèle avancé
-contre 16 428 au classique. La probabilité d'observer un tel déséquilibre si les
+ferait le hasard. Sur 31 434 désaccords, 16 723 donnent raison au modèle avancé
+contre 14 711 au classique. La probabilité d'observer un tel déséquilibre si les
 deux modèles se valaient est de l'ordre de 1 sur 10²⁹.
 
 **Les deux modèles avancés gagnent, et cette fois c'est démontré.** Le classement

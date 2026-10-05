@@ -1,7 +1,7 @@
 {
   "nom_modele": "analyse-sentiment-air-paradis-avance",
   "architecture": "GRU bidirectionnel 64, embeddings GloVe Twitter figes",
-  "date_export": "2026-09-01 16:47:16",
+  "date_export": "2026-10-05 15:27:13",
   "run_mlflow": "4e589300929b47fcb6edb4314d3b6c80",
   "longueur_max_sequence": 32,
   "index_mot_inconnu": 1,
